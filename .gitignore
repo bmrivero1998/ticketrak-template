@@ -1,0 +1,27 @@
+# See https://www.toptal.com/developers/gitignore/api/react
+node_modules
+vercel
+.next
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
+.env
+*.log
+*.tmp
+*.cache
+*.eslintcache
+coverage
+dist
+build
+public/build
+public/static/js/*.chunk.js
+public/static/js/*.chunk.js.LICENSE.txt
+public/static/js/*.chunk.js.map
+public/static/css/*.chunk.css
+public/static/css/*.chunk.css.map
+public/static/worker/**/*.js
+public/static/worker/**/*.js.LICENSE.txt
+public/static/worker/**/*.js.map
+public/static/worker/**/*.css
+public/static/worker/**/*.css.map
