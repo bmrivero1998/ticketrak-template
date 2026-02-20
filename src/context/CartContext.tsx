@@ -32,7 +32,7 @@ const CartContext = createContext<CartContextValue | null>(null)
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
 
-  const totalCents = items.reduce((sum, i) => sum + i.tier.price_cents * i.quantity, 0)
+  const totalCents = items.reduce((sum, i) => sum + i.tier.price_amount * i.quantity, 0)
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0)
 
   const addItem = useCallback((tier: Tier, quantity: number) => {
@@ -42,7 +42,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const newQty = Math.min(
           existing.quantity + quantity,
           CONFIG.MAX_TICKETS_PER_ORDER,
-          tier.available,
+          tier.stock_total-tier.stock_sold,
         )
         return prev.map((i) => (i.tier.id === tier.id ? { ...i, quantity: newQty } : i))
       }
@@ -50,7 +50,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         ...prev,
         {
           tier,
-          quantity: Math.min(quantity, CONFIG.MAX_TICKETS_PER_ORDER, tier.available),
+          quantity: Math.min(quantity, CONFIG.MAX_TICKETS_PER_ORDER, tier.stock_total-tier.stock_sold),
         },
       ]
     })
@@ -67,7 +67,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setItems((prev) =>
         prev.map((i) =>
           i.tier.id === tierId
-            ? { ...i, quantity: Math.min(quantity, CONFIG.MAX_TICKETS_PER_ORDER, i.tier.available) }
+            ? { ...i, quantity: Math.min(quantity, CONFIG.MAX_TICKETS_PER_ORDER, i.tier.stock_total-i.tier.stock_sold) }
             : i,
         ),
       )

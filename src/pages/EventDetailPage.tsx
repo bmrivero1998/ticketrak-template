@@ -43,7 +43,7 @@ export default function EventDetailPage() {
       {/* ── HERO IMAGEN ────────────────────────────────────────── */}
       <div className="tk-event-detail__hero">
         <img
-          src={event.poster_url || 'https://placehold.co/1200x500/111/333?text=Evento'}
+          src={event.poster_image_url || 'https://placehold.co/1200x500/111/333?text=Evento'}
           alt={event.name}
           className="tk-event-detail__hero-img"
         />

@@ -16,7 +16,7 @@ export function EventCard({ event, index = 0 }: Props) {
     >
       <div className="tk-event-card__image-wrap">
         <img
-          src={event.poster_url || 'https://placehold.co/400x560/111/333?text=Evento'}
+          src={event.poster_image_url || 'https://placehold.co/400x560/111/333?text=Evento'}
           alt={event.name}
           className="tk-event-card__image"
           loading="lazy"

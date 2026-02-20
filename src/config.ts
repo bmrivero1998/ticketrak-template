@@ -11,7 +11,7 @@ export const CONFIG = {
   // API
   // ----------------------------------------------------------
   /** URL base de la API de Ticketrak. Sin trailing slash. */
-  API_URL:'https://api.ticketrak.com',
+  API_URL:'https://metritrak-workers.kripto-bmrp.workers.dev/v1',
 
   // ----------------------------------------------------------
   // PROYECTO
@@ -21,7 +21,7 @@ export const CONFIG = {
    * Se usa para filtrar los eventos de la cartelera.
    * Puedes sobreescribirlo con VITE_PROJECT_ID en .env
    */
-  PROJECT_ID: '',
+  PROJECT_ID: '174d380b-86a6-4d1f-999b-2bafc81a51e0',
 
   // ----------------------------------------------------------
   // BRANDING
@@ -72,8 +72,9 @@ export const CONFIG = {
   // MISC
   // ----------------------------------------------------------
   /** URL de la API de Stripe. Usada en checkout */
-  PUBLIC_KEY: 'pk_test_xxxxxxxxxxxxxxxxx',
+  PUBLIC_KEY: 'pk_test_51Rjrn9Q7rhLBuE2WtlgmxYdM1qYMuku9y7fNTBq5VblSsqzxOJyxeCVrByrnJkzYGbtTUFnlV3JjcaEn3657hm6000X2SBZZ4O',
 
+  STRIPE_ACCOUNT: 'acct_1SueuhQ7rhbnDgY2'
 
 } as const
 

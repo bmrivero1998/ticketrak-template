@@ -12,29 +12,31 @@ export function TierSelector({ tiers }: Props) {
   const getQty = (tierId: string) =>
     items.find((i) => i.tier.id === tierId)?.quantity ?? 0
 
+
+
   return (
     <div className="tk-tiers">
       {tiers.map((tier) => {
         const qty = getQty(tier.id)
-        const soldOut = tier.available === 0
+        const soldOut = tier.stock_total - tier.stock_sold === 0
 
         return (
           <div key={tier.id} className={`tk-tier ${soldOut ? 'tk-tier--sold-out' : ''}`}>
             <div className="tk-tier__info">
               <h4 className="tk-tier__name">{tier.name}</h4>
-              {tier.description && (
-                <p className="tk-tier__desc">{tier.description}</p>
+              {tier.settings && (
+                <p className="tk-tier__desc">{tier.settings.donation_enabled ? 'Incluye donación' : 'Sin donación'}</p>
               )}
               <div className="tk-tier__meta">
                 <span className="tk-tier__price">
-                  {tier.price_cents === 0 ? 'Gratis' : formatCurrency(tier.price_cents)}
+                  {tier.price_amount === 0 ? 'Gratis' : formatCurrency(tier.price_amount)}
                 </span>
                 <span className="tk-tier__stock">
                   {soldOut
                     ? 'Agotado'
-                    : tier.available <= 10
-                    ? `¡Últimos ${tier.available}!`
-                    : `${tier.available} disponibles`}
+                    : tier.stock_total - tier.stock_sold <= 10
+                    ? `¡Últimos ${tier.stock_total - tier.stock_sold}!`
+                    : `${tier.stock_total - tier.stock_sold} disponibles`}
                 </span>
               </div>
             </div>
@@ -62,7 +64,7 @@ export function TierSelector({ tiers }: Props) {
                   <button
                     className="tk-qty__btn"
                     onClick={() => updateQuantity(tier.id, qty + 1)}
-                    disabled={qty >= tier.available}
+                    disabled={qty >= tier.stock_total - tier.stock_sold}
                     aria-label="Agregar uno"
                   >
                     +

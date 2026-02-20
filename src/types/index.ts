@@ -2,13 +2,20 @@
  * Tipos alineados con el OpenAPI spec de Ticketrak Public API v1.0.0
  */
 
+export interface ResponseApi<T> {
+  data: T,
+  success: boolean,
+  error?: string
+}
+
+
 // ─── EVENTS ──────────────────────────────────────────────────────────────────
 
 export interface EventSummary {
   id: string
   name: string
   venue_name: string
-  poster_url: string
+  poster_image_url: string
   start_date: string // ISO 8601
 }
 
@@ -20,13 +27,20 @@ export interface EventDetail extends EventSummary {
 
 // ─── TIERS ───────────────────────────────────────────────────────────────────
 
-export interface Tier {
-  id: string
-  name: string
-  price_cents: number
-  capacity: number
-  available: number
-  description?: string
+export interface Tier{
+    id: string
+    event_id: string
+    project_id: string
+    name: string
+    type: "PAID" | "FREE"
+    stock_total: number
+    stock_sold: number
+    price_amount: number
+    min_donation_amount: number
+    settings: null | {
+        donation_enabled: boolean
+    }
+    created_at: string
 }
 
 // ─── ENGINE ──────────────────────────────────────────────────────────────────
@@ -51,28 +65,47 @@ export interface BillingDetails {
 }
 
 export interface ReserveRequest {
+  project_id: string
   event_id: string
   customer_email: string
-  items: ReserveItem[]
+  customer_name: string
+  contact_phone: string
+  items: ReserveItem[]  
   billing_details?: BillingDetails
 }
 
-export interface ReserveResponse {
-  reservation_id: string
-  total_cents: number
-  expires_at: string // ISO 8601
+
+export interface ReserveResponse 
+  {
+    id: string,
+    project_id: string
+    event_id: string
+    tier_id: string
+    customer_email:string
+    quantity: number
+    session_token: string
+    expires_at:string
+    processed: number,
+    created_at: string,
+    contact_phone: string
+    customer_name: string
 }
 
+
 export interface CheckoutSessionRequest {
-  reservation_id: string
-  success_url: string
-  cancel_url: string
+      reservation_id: string;
+        project_uuid: string;
+        customer_data: {
+          email: string;
+          name: string;
+        }
 }
 
 export interface CheckoutSessionResponse {
   url: string
   sessionId: string
-  client_secret?: string // Necesario para Stripe Embedded Checkout
+  clientSecret: string // Necesario para Stripe Embedded Checkout
+  orderUuid:string
 }
 
 export interface CheckoutSessionStatus {

@@ -25,7 +25,7 @@ export function CartSummary() {
             </div>
             <div className="tk-cart-summary__item-right">
               <span className="tk-cart-summary__item-price">
-                {formatCurrency(tier.price_cents * quantity)}
+                {formatCurrency(tier.price_amount * quantity)}
               </span>
               <button
                 className="tk-cart-summary__remove"

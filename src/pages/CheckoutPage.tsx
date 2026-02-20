@@ -1,14 +1,16 @@
-import { useState } from 'react'
+import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loadStripe } from '@stripe/stripe-js'
-import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { CartSummary } from '@/components/checkout/CartSummary'
 import { useCart } from '@/context/CartContext'
 import { createReservation, createCheckoutSession } from '@/services/api'
 import { CONFIG } from '@/config'
 import type { BillingDetails } from '@/types'
 
-  const stripePromise = loadStripe(CONFIG.PUBLIC_KEY)
+const stripePromise = loadStripe(CONFIG.PUBLIC_KEY, {
+  stripeAccount: CONFIG.STRIPE_ACCOUNT
+})
 
 const ChevronDown = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -16,11 +18,61 @@ const ChevronDown = () => (
   </svg>
 )
 
+// --- NUEVO COMPONENTE PARA PROCESAR EL PAGO ---
+const CheckoutPaymentForm = () => {
+  const stripe = useStripe()
+  const elements = useElements()
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+
+    if (!stripe || !elements) return
+
+    setIsProcessing(true)
+    setPaymentError(null)
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        // Asegúrate de tener una ruta /success (o la que prefieras) configurada en tu router
+        return_url: `${window.location.origin}/success`, 
+      },
+    })
+
+    if (error) {
+      setPaymentError(error.message ?? 'Ocurrió un error inesperado con el pago.')
+    }
+    
+    setIsProcessing(false)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <PaymentElement />
+      {paymentError && <div className="tk-form-error">{paymentError}</div>}
+      <button 
+        type="submit" 
+        className="tk-btn tk-btn--primary tk-btn--full tk-btn--lg"
+        disabled={isProcessing || !stripe || !elements}
+      >
+        {isProcessing ? 'Procesando pago...' : 'Confirmar Pagar'}
+      </button>
+    </form>
+  )
+}
+// ----------------------------------------------
+
+
 export default function CheckoutPage() {
   const navigate = useNavigate()
   const { items, totalItems, clearCart } = useCart()
 
   const [email, setEmail] = useState('')
+  const [customerName, setCustomerName] = useState('')
+  const [contactNumber, setContactNumber] = useState('')  
+
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [wantsInvoice, setWantsInvoice] = useState(false)
   const [billing, setBilling] = useState<BillingDetails>({
@@ -77,6 +129,15 @@ export default function CheckoutPage() {
       setError('Por favor completa los datos fiscales obligatorios.')
       return
     }
+    if (!customerName.trim()) {
+      setError('Ingresa tu nombre.')
+      return
+    }
+
+    if (!contactNumber.trim() || contactNumber.length < 8) {
+      setError('Ingresa un número de contacto válido.')
+      return
+    }
 
     const storedEventId = sessionStorage.getItem('current_event_id')
     if (!storedEventId) {
@@ -89,20 +150,28 @@ export default function CheckoutPage() {
 
     try {
       const reservation = await createReservation({
+        project_id: CONFIG.PROJECT_ID,
         event_id: storedEventId,
         customer_email: email.trim(),
+        customer_name: customerName.trim(),
+        contact_phone: contactNumber.trim(),
         items: items.map((i) => ({ tier_id: i.tier.id, quantity: i.quantity })),
         billing_details: wantsInvoice ? billing : undefined
       })
 
+      const firstData = reservation[0];
+
       const session = await createCheckoutSession({
-        reservation_id: reservation.reservation_id,
-        success_url: `${CONFIG.SITE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${CONFIG.SITE_URL}/checkout`,
+        reservation_id: firstData.id,
+        project_uuid: CONFIG.PROJECT_ID,
+        customer_data:{
+          email: email,
+          name: customerName
+        }
       })
 
-      if (!session.client_secret) throw new Error('Error al iniciar el proceso de pago.')
-      setClientSecret(session.client_secret)
+      if (!session.clientSecret) throw new Error('Error al iniciar el proceso de pago.')
+      setClientSecret(session.clientSecret)
       clearCart()
     } catch (err: any) {
       setError(err.message ?? 'Error al procesar. Intenta de nuevo.')
@@ -110,24 +179,32 @@ export default function CheckoutPage() {
     }
   }
 
+  // 1. Mostrar Stripe Elements si ya tenemos el Payment Intent
+  if (clientSecret) {
+    return (
+      <div className="tk-checkout">
+        <div className="tk-container tk-checkout__inner">
+          <button className="tk-btn-back" onClick={() => setClientSecret(null)}>← Corregir datos</button>
+          
+          <div className="tk-checkout__form" style={{ marginTop: '2rem', padding: '2rem', background: '#fff', borderRadius: '8px' }}>
+            <h2 className="tk-checkout__form-title">Ingresa tu método de pago</h2>
+            
+            <Elements stripe={stripePromise} options={{ clientSecret }}>
+              <CheckoutPaymentForm />
+            </Elements>
+            
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 2. Mostrar Carrito vacío si no hay items ni clientSecret activo
   if (totalItems === 0) {
     return (
       <div className="tk-container tk-checkout-empty">
         <p>No tienes boletos en tu carrito.</p>
         <button className="tk-btn tk-btn--ghost" onClick={() => navigate('/')}>Ver eventos</button>
-      </div>
-    )
-  }
-
-  if (clientSecret) {
-    return (
-      <div className="tk-checkout tk-checkout--embedded">
-        <div className="tk-container">
-          <button className="tk-btn-back" onClick={() => setClientSecret(null)}>← Corregir datos</button>
-          <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret }}>
-            <EmbeddedCheckout />
-          </EmbeddedCheckoutProvider>
-        </div>
       </div>
     )
   }
@@ -154,6 +231,27 @@ export default function CheckoutPage() {
                 placeholder="tu@correo.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <div className="tk-form-group">
+              <label className="tk-form-label">Nombre Completo</label>
+              <input
+                className="tk-form-input"
+                placeholder="Tu nombre"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="tk-form-group">
+              <label className="tk-form-label">Teléfono / WhatsApp</label>
+              <input
+                className="tk-form-input"
+                placeholder="5512345678"
+                value={contactNumber}
+                onChange={(e) => setContactNumber(e.target.value.replace(/\D/g,''))}
                 disabled={loading}
               />
             </div>
