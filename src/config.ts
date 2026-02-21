@@ -1,106 +1,84 @@
 /**
- * ============================================================
- * TICKETRAK — CONFIG.TS
- * Configuración central del cliente público.
- * Edita estos valores para personalizar tu instancia.
- * ============================================================
- */
+* ============================================================
+* TICKETRAK — CONFIG.TS
+* Configuración central del cliente público (Widget Mode).
+* ============================================================
+*/
+
+// Permite que sistemas externos (WP, PHP, Angular) sobreescriban la config
+const win = window as any;
+const externalConfig = win.TICKETRAK_CONFIG || {};
 
 export const CONFIG = {
-  // ----------------------------------------------------------
-  // API
-  // ----------------------------------------------------------
-  /** URL base de la API de Ticketrak. Sin trailing slash. */
-  API_URL:'https://metritrak-workers.kripto-bmrp.workers.dev/v1',
+ // ----------------------------------------------------------
+ // API & PROYECTO
+ // ----------------------------------------------------------
+ API_URL: externalConfig.API_URL || 'https://metritrak-workers.kripto-bmrp.workers.dev/v1',
+ PROJECT_ID: externalConfig.PROJECT_ID || '174d380b-86a6-4d1f-999b-2bafc81a51e0',
 
-  // ----------------------------------------------------------
-  // PROYECTO
-  // ----------------------------------------------------------
-  /**
-   * UUID del proyecto asociado a esta instancia.
-   * Se usa para filtrar los eventos de la cartelera.
-   * Puedes sobreescribirlo con VITE_PROJECT_ID en .env
-   */
-  PROJECT_ID: '174d380b-86a6-4d1f-999b-2bafc81a51e0',
+ // ----------------------------------------------------------
+ // BRANDING & THEME (Shadow DOM Friendly)
+ // ----------------------------------------------------------
+ BRAND_NAME: externalConfig.BRAND_NAME || 'Ticketrak',
+ BRAND_TAGLINE: externalConfig.BRAND_TAGLINE || 'Vive la experiencia.',
+ LOGO_URL: externalConfig.LOGO_URL || '',
 
-  // ----------------------------------------------------------
-  // BRANDING
-  // ----------------------------------------------------------
-  /** Nombre que aparece en el header y en el <title> */
-  BRAND_NAME:'Ticketrak',
+ // Variables de color para Bootstrap
+ THEME: {
+  PRIMARY: externalConfig.PRIMARY_COLOR || '#124cb8',
+  SECONDARY: externalConfig.SECONDARY_COLOR || '#e6e6e6',
+  BACKGROUND: externalConfig.BG_COLOR || '#000000',
+  TEXT: externalConfig.TEXT_COLOR || '#caccce',
+  TEXT_SECONDARY: externalConfig.TEXT_SECONDARY || '#9c9d9e'
+ },
 
-  /** Tagline del hero en la cartelera */
-  BRAND_TAGLINE:'Vive la experiencia.',
+ // ----------------------------------------------------------
+ // UI & LOCALIZACIÓN
+ // ----------------------------------------------------------
+ CURRENCY: externalConfig.CURRENCY || 'MXN',
+ LOCALE:externalConfig.LOCALE || 'es-MX',
+ RESERVATION_TTL_MINUTES: externalConfig.RESERVATION_TTL_MINUTES || 10,
+ MAX_TICKETS_PER_ORDER: externalConfig.MAX_TICKETS_PER_ORDER || 10,
 
-  /** URL del logo (svg/png). Si está vacío se usa el nombre en texto. */
-  LOGO_URL: '',
+ // ----------------------------------------------------------
+ // STRIPE & CHECKOUT
+ // ----------------------------------------------------------
+ SITE_URL: externalConfig.SITE_URL || 'http://localhost:5173',
+ PUBLIC_KEY: externalConfig.PUBLIC_KEY || 'pk_test_51Rjrn9Q7rhLBuE2WtlgmxYdM1qYMuku9y7fNTBq5VblSsqzxOJyxeCVrByrnJkzYGbtTUFnlV3JjcaEn3657hm6000X2SBZZ4O',
+ STRIPE_ACCOUNT: externalConfig.STRIPE_ACCOUNT || 'acct_1SueuhQ7rhbnDgY2',
 
-  // ----------------------------------------------------------
-  // RUTAS DE RETORNO (usadas en checkout de Stripe)
-  // ----------------------------------------------------------
-  /** URL base del sitio — usada para construir success_url y cancel_url */
-  SITE_URL: 'http://localhost:5173',
+ // ----------------------------------------------------------
+ // FEATURE FLAGS
+ // ----------------------------------------------------------
+ ENABLE_VAULT: false,
+ SHOW_PAST_EVENTS: externalConfig.SHOW_PAST_EVENTS || false,
 
-  // ----------------------------------------------------------
-  // RESERVA
-  // ----------------------------------------------------------
-  /** Tiempo en minutos que dura el bloqueo de reserva (informativo, el backend lo define) */
-  RESERVATION_TTL_MINUTES: 10,
-
-  /** Máximo de boletos por transacción */
-  MAX_TICKETS_PER_ORDER: 10,
-
-  // ----------------------------------------------------------
-  // UI
-  // ----------------------------------------------------------
-  /** Moneda para formateo de precios en pantalla */
-  CURRENCY: 'MXN',
-
-  /** Locale para Intl.NumberFormat */
-  LOCALE: 'es-MX',
-
-  // ----------------------------------------------------------
-  // FEATURE FLAGS
-  // ----------------------------------------------------------
-  /** Muestra el botón "Mis Boletos" (vault) en el header */
-  ENABLE_VAULT: false,
-
-  /** Muestra eventos pasados en la cartelera */
-  SHOW_PAST_EVENTS: false,
-
-  // ----------------------------------------------------------
-  // MISC
-  // ----------------------------------------------------------
-  /** URL de la API de Stripe. Usada en checkout */
-  PUBLIC_KEY: 'pk_test_51Rjrn9Q7rhLBuE2WtlgmxYdM1qYMuku9y7fNTBq5VblSsqzxOJyxeCVrByrnJkzYGbtTUFnlV3JjcaEn3657hm6000X2SBZZ4O',
-
-  STRIPE_ACCOUNT: 'acct_1SueuhQ7rhbnDgY2'
-
-} as const
+ ROUTE_PAGE: externalConfig.ROUTE_PAGE || 'shop'
+} as const;
 
 /** Helper: formatea centavos a moneda local */
 export const formatCurrency = (cents: number): string =>
-  new Intl.NumberFormat(CONFIG.LOCALE, {
-    style: 'currency',
-    currency: CONFIG.CURRENCY,
-    minimumFractionDigits: 0,
-  }).format(cents / 100)
+ new Intl.NumberFormat(CONFIG.LOCALE, {
+  style: 'currency',
+  currency: CONFIG.CURRENCY,
+  minimumFractionDigits: 0,
+ }).format(cents / 100);
 
 /** Helper: formatea fecha ISO a legible en español */
 export const formatDate = (iso: string): string =>
-  new Intl.DateTimeFormat(CONFIG.LOCALE, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(iso))
+ new Intl.DateTimeFormat(CONFIG.LOCALE, {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+ }).format(new Date(iso));
 
 /** Helper: formatea fecha corta (para cards) */
 export const formatDateShort = (iso: string): string =>
-  new Intl.DateTimeFormat(CONFIG.LOCALE, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(iso))
+ new Intl.DateTimeFormat(CONFIG.LOCALE, {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+ }).format(new Date(iso));

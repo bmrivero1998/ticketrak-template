@@ -36,7 +36,6 @@ const CheckoutPaymentForm = () => {
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        // Asegúrate de tener una ruta /success (o la que prefieras) configurada en tu router
         return_url: `${window.location.origin}/success`, 
       },
     })
@@ -49,12 +48,14 @@ const CheckoutPaymentForm = () => {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <form onSubmit={handleSubmit} className="d-flex flex-column gap-4">
       <PaymentElement />
-      {paymentError && <div className="tk-form-error">{paymentError}</div>}
+      {paymentError && (
+        <div className="alert alert-danger py-2 mb-0">{paymentError}</div>
+      )}
       <button 
         type="submit" 
-        className="tk-btn tk-btn--primary tk-btn--full tk-btn--lg"
+        className="btn btn-primary w-100 btn-lg"
         disabled={isProcessing || !stripe || !elements}
       >
         {isProcessing ? 'Procesando pago...' : 'Confirmar Pagar'}
@@ -182,17 +183,20 @@ export default function CheckoutPage() {
   // 1. Mostrar Stripe Elements si ya tenemos el Payment Intent
   if (clientSecret) {
     return (
-      <div className="tk-checkout">
-        <div className="tk-container tk-checkout__inner">
-          <button className="tk-btn-back" onClick={() => setClientSecret(null)}>← Corregir datos</button>
-          
-          <div className="tk-checkout__form" style={{ marginTop: '2rem', padding: '2rem', background: '#fff', borderRadius: '8px' }}>
-            <h2 className="tk-checkout__form-title">Ingresa tu método de pago</h2>
-            
-            <Elements stripe={stripePromise} options={{ clientSecret }}>
-              <CheckoutPaymentForm />
-            </Elements>
-            
+      <div className="container py-4">
+        <div className="row justify-content-center">
+          <div className="col-12 col-lg-6">
+            <button className="btn btn-link text-decoration-none ps-0 mb-3" onClick={() => setClientSecret(null)}>
+              ← Corregir datos
+            </button>
+            <div className="card shadow-sm">
+              <div className="card-body p-4">
+                <h2 className="card-title h5 mb-4">Ingresa tu método de pago</h2>
+                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                  <CheckoutPaymentForm />
+                </Elements>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -202,168 +206,184 @@ export default function CheckoutPage() {
   // 2. Mostrar Carrito vacío si no hay items ni clientSecret activo
   if (totalItems === 0) {
     return (
-      <div className="tk-container tk-checkout-empty">
-        <p>No tienes boletos en tu carrito.</p>
-        <button className="tk-btn tk-btn--ghost" onClick={() => navigate('/')}>Ver eventos</button>
+      <div className="container py-5 text-center">
+        <p className="text-muted">No tienes boletos en tu carrito.</p>
+        <button className="btn btn-outline-primary" onClick={() => navigate('/')}>Ver eventos</button>
       </div>
     )
   }
 
   return (
-    <div className="tk-checkout">
-      <div className="tk-container tk-checkout__inner">
-        <button className="tk-btn-back" onClick={() => navigate(-1)}>← Volver</button>
-        <h1 className="tk-checkout__title">Confirma tu pedido</h1>
+    <div className="container py-4">
+      <button className="btn btn-link text-decoration-none ps-0 mb-3" onClick={() => navigate(-1)}>
+        ← Volver
+      </button>
+      <h1 className="h4 mb-4">Confirma tu pedido</h1>
 
-        <div className="tk-checkout__grid">
-          <div className="tk-checkout__summary">
-            <CartSummary />
-          </div>
+      <div className="row g-4">
+        {/* Resumen del carrito */}
+        <div className="col-12 col-lg-5">
+          <CartSummary />
+        </div>
 
-          <div className="tk-checkout__form">
-            <h2 className="tk-checkout__form-title">Datos de Contacto</h2>
-            <div className="tk-form-group">
-              <label htmlFor="email" className="tk-form-label">Correo Electrónico</label>
-              <input
-                id="email"
-                type="email"
-                className="tk-form-input"
-                placeholder="tu@correo.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-            <div className="tk-form-group">
-              <label className="tk-form-label">Nombre Completo</label>
-              <input
-                className="tk-form-input"
-                placeholder="Tu nombre"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                disabled={loading}
-              />
-            </div>
+        {/* Formulario */}
+        <div className="col-12 col-lg-7">
+          <div className="card shadow-sm">
+            <div className="card-body p-4">
+              <h2 className="card-title h5 mb-4">Datos de Contacto</h2>
 
-            <div className="tk-form-group">
-              <label className="tk-form-label">Teléfono / WhatsApp</label>
-              <input
-                className="tk-form-input"
-                placeholder="5512345678"
-                value={contactNumber}
-                onChange={(e) => setContactNumber(e.target.value.replace(/\D/g,''))}
-                disabled={loading}
-              />
-            </div>
-
-            <div className="tk-billing-toggle" style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #eee' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+              <div className="mb-3">
+                <label htmlFor="email" className="form-label">Correo Electrónico</label>
                 <input
-                  type="checkbox"
-                  checked={wantsInvoice}
-                  onChange={(e) => setWantsInvoice(e.target.checked)}
-                  style={{ width: '18px', height: '18px' }}
+                  id="email"
+                  type="email"
+                  className="form-control"
+                  placeholder="tu@correo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
                 />
-                <span className="tk-form-label" style={{ marginBottom: 0 }}>Requiero Factura (RFC)</span>
-              </label>
-            </div>
+              </div>
 
-            {wantsInvoice && (
-              <div className="tk-billing-form" style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="tk-form-group">
-                    <label className="tk-form-label">RFC</label>
-                    <input
-                      className="tk-form-input"
-                      placeholder="XAXX010101000"
-                      value={billing.tax_id}
-                      onChange={(e) => setBilling({...billing, tax_id: e.target.value.toUpperCase()})}
-                    />
-                  </div>
-                  <div className="tk-form-group">
-                    <label className="tk-form-label">C.P.</label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        className="tk-form-input"
-                        placeholder="00000"
-                        maxLength={5}
-                        value={billing.postal_code}
-                        onChange={(e) => handlePostalCodeChange(e.target.value.replace(/\D/g,''))}
-                      />
-                      {loadingCP && <span style={{ position: 'absolute', right: 10, top: 12, fontSize: '0.8rem', color: '#888' }}>...</span>}
-                    </div>
-                  </div>
-                </div>
+              <div className="mb-3">
+                <label className="form-label">Nombre Completo</label>
+                <input
+                  className="form-control"
+                  placeholder="Tu nombre"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
 
-                <div className="tk-form-group">
-                  <label className="tk-form-label">Razón Social</label>
+              <div className="mb-3">
+                <label className="form-label">Teléfono / WhatsApp</label>
+                <input
+                  className="form-control"
+                  placeholder="5512345678"
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value.replace(/\D/g,''))}
+                  disabled={loading}
+                />
+              </div>
+
+              {/* Toggle Factura */}
+              <div className="border-top pt-3 mt-3">
+                <div className="form-check">
                   <input
-                    className="tk-form-input"
-                    placeholder="Nombre o Razón Social"
-                    value={billing.legal_name}
-                    onChange={(e) => setBilling({...billing, legal_name: e.target.value})}
+                    className="form-check-input"
+                    type="checkbox"
+                    id="wantsInvoice"
+                    checked={wantsInvoice}
+                    onChange={(e) => setWantsInvoice(e.target.checked)}
                   />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="tk-form-group">
-                    <label className="tk-form-label">Estado</label>
-                    <input
-                      className="tk-form-input"
-                      readOnly={colonias.length > 0}
-                      value={billing.state}
-                      onChange={(e) => setBilling({...billing, state: e.target.value})}
-                      style={{ backgroundColor: colonias.length > 0 ? '#f9f9f9' : '#fff' }}
-                    />
-                  </div>
-                  <div className="tk-form-group">
-                    <label className="tk-form-label">Colonia</label>
-                    {colonias.length > 0 ? (
-                      <div style={{ position: 'relative' }}>
-                        <select 
-                          className="tk-form-input"
-                          value={billing.neighborhood}
-                          onChange={(e) => setBilling({...billing, neighborhood: e.target.value})}
-                          style={{ appearance: 'none' }}
-                        >
-                          <option value="">Selecciona...</option>
-                          {colonias.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                        <div style={{ position: 'absolute', right: 12, top: 14, pointerEvents: 'none' }}><ChevronDown /></div>
-                      </div>
-                    ) : (
-                      <input
-                        className="tk-form-input"
-                        placeholder="Colonia"
-                        value={billing.neighborhood}
-                        onChange={(e) => setBilling({...billing, neighborhood: e.target.value})}
-                      />
-                    )}
-                  </div>
-                </div>
-
-                <div className="tk-form-group">
-                  <label className="tk-form-label">Dirección (Calle y Número)</label>
-                  <input
-                    className="tk-form-input"
-                    placeholder="Calle 123, Col. Centro"
-                    value={billing.address}
-                    onChange={(e) => setBilling({...billing, address: e.target.value})}
-                  />
+                  <label className="form-check-label" htmlFor="wantsInvoice">
+                    Requiero Factura (RFC)
+                  </label>
                 </div>
               </div>
-            )}
 
-            {error && <div className="tk-form-error" style={{ marginTop: '1rem' }}>{error}</div>}
+              {/* Datos fiscales */}
+              {wantsInvoice && (
+                <div className="mt-3 d-flex flex-column gap-3">
+                  <div className="row g-3">
+                    <div className="col-6">
+                      <label className="form-label">RFC</label>
+                      <input
+                        className="form-control"
+                        placeholder="XAXX010101000"
+                        value={billing.tax_id}
+                        onChange={(e) => setBilling({...billing, tax_id: e.target.value.toUpperCase()})}
+                      />
+                    </div>
+                    <div className="col-6">
+                      <label className="form-label">C.P.</label>
+                      <div className="position-relative">
+                        <input
+                          className="form-control"
+                          placeholder="00000"
+                          maxLength={5}
+                          value={billing.postal_code}
+                          onChange={(e) => handlePostalCodeChange(e.target.value.replace(/\D/g,''))}
+                        />
+                        {loadingCP && (
+                          <span className="position-absolute end-0 top-50 translate-middle-y pe-3 text-muted small">
+                            ...
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-            <button
-              className="tk-btn tk-btn--primary tk-btn--full tk-btn--lg"
-              onClick={handleCheckout}
-              disabled={loading}
-              style={{ marginTop: '2rem' }}
-            >
-              {loading ? 'Preparando pago...' : 'Pagar ahora →'}
-            </button>
+                  <div>
+                    <label className="form-label">Razón Social</label>
+                    <input
+                      className="form-control"
+                      placeholder="Nombre o Razón Social"
+                      value={billing.legal_name}
+                      onChange={(e) => setBilling({...billing, legal_name: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="row g-3">
+                    <div className="col-6">
+                      <label className="form-label">Estado</label>
+                      <input
+                        className={`form-control ${colonias.length > 0 ? 'bg-light' : ''}`}
+                        readOnly={colonias.length > 0}
+                        value={billing.state}
+                        onChange={(e) => setBilling({...billing, state: e.target.value})}
+                      />
+                    </div>
+                    <div className="col-6">
+                      <label className="form-label">Colonia</label>
+                      {colonias.length > 0 ? (
+                        <div className="position-relative">
+                          <select 
+                            className="form-select"
+                            value={billing.neighborhood}
+                            onChange={(e) => setBilling({...billing, neighborhood: e.target.value})}
+                          >
+                            <option value="">Selecciona...</option>
+                            {colonias.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                          {/* Bootstrap maneja el chevron en form-select automáticamente */}
+                        </div>
+                      ) : (
+                        <input
+                          className="form-control"
+                          placeholder="Colonia"
+                          value={billing.neighborhood}
+                          onChange={(e) => setBilling({...billing, neighborhood: e.target.value})}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="form-label">Dirección (Calle y Número)</label>
+                    <input
+                      className="form-control"
+                      placeholder="Calle 123, Col. Centro"
+                      value={billing.address}
+                      onChange={(e) => setBilling({...billing, address: e.target.value})}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="alert alert-danger py-2 mt-3 mb-0">{error}</div>
+              )}
+
+              <button
+                className="btn btn-primary w-100 btn-lg mt-4"
+                onClick={handleCheckout}
+                disabled={loading}
+              >
+                {loading ? 'Preparando pago...' : 'Pagar ahora →'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

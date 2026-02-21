@@ -6,42 +6,44 @@ export function CartSummary() {
 
   if (items.length === 0) {
     return (
-      <div className="tk-cart-empty">
+      <div className="text-center text-muted py-4">
         <p>Tu carrito está vacío.</p>
       </div>
     )
   }
 
   return (
-    <div className="tk-cart-summary">
-      <h3 className="tk-cart-summary__title">Tu Pedido</h3>
+    <div className="card shadow-sm">
+      <div className="card-body">
+        <h3 className="card-title h5 mb-3">Tu Pedido</h3>
 
-      <ul className="tk-cart-summary__list">
-        {items.map(({ tier, quantity }) => (
-          <li key={tier.id} className="tk-cart-summary__item">
-            <div className="tk-cart-summary__item-info">
-              <span className="tk-cart-summary__item-name">{tier.name}</span>
-              <span className="tk-cart-summary__item-qty">× {quantity}</span>
-            </div>
-            <div className="tk-cart-summary__item-right">
-              <span className="tk-cart-summary__item-price">
-                {formatCurrency(tier.price_amount * quantity)}
-              </span>
-              <button
-                className="tk-cart-summary__remove"
-                onClick={() => removeItem(tier.id)}
-                aria-label={`Eliminar ${tier.name}`}
-              >
-                ×
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+        <ul className="list-unstyled d-flex flex-column gap-2 mb-3">
+          {items.map(({ tier, quantity }) => (
+            <li key={tier.id} className="d-flex justify-content-between align-items-center">
+              <div className="d-flex align-items-center gap-2">
+                <span className="fw-medium">{tier.name}</span>
+                <span className="text-muted small">× {quantity}</span>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <span className="fw-semibold">
+                  {formatCurrency(tier.price_amount * quantity)}
+                </span>
+                <button
+                  className="btn btn-link text-danger p-0 lh-1 text-decoration-none"
+                  onClick={() => removeItem(tier.id)}
+                  aria-label={`Eliminar ${tier.name}`}
+                >
+                  ×
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
 
-      <div className="tk-cart-summary__total">
-        <span>Total</span>
-        <strong>{formatCurrency(totalCents)}</strong>
+        <div className="border-top pt-3 d-flex justify-content-between align-items-center">
+          <span className="fw-semibold">Total</span>
+          <strong className="text-primary fs-5">{formatCurrency(totalCents)}</strong>
+        </div>
       </div>
     </div>
   )

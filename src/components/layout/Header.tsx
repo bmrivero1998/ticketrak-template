@@ -7,25 +7,27 @@ export function Header() {
   const navigate = useNavigate()
 
   return (
-    <header className="tk-header">
-      <div className="tk-header__inner">
-        <Link to="/" className="tk-header__brand">
+    <header className="border-bottom bg-white sticky-top shadow-sm">
+      <div className="container d-flex justify-content-between align-items-center py-3">
+        {/* Brand */}
+        <Link to="/" className="text-decoration-none text-reset">
           {CONFIG.LOGO_URL ? (
-            <img src={CONFIG.LOGO_URL} alt={CONFIG.BRAND_NAME} className="tk-header__logo" />
+            <img src={CONFIG.LOGO_URL} alt={CONFIG.BRAND_NAME} style={{ height: 32 }} />
           ) : (
-            <span className="tk-header__name">{CONFIG.BRAND_NAME}</span>
+            <span className="fw-bold fs-5">{CONFIG.BRAND_NAME}</span>
           )}
         </Link>
 
-        <nav className="tk-header__nav">
+        {/* Nav */}
+        <nav className="d-flex align-items-center gap-3">
           {CONFIG.ENABLE_VAULT && (
-            <Link to="/vault" className="tk-header__link">
+            <Link to="/vault" className="text-decoration-none text-muted small fw-medium">
               Mis Boletos
             </Link>
           )}
 
           <button
-            className="tk-header__cart"
+            className="btn btn-link text-reset p-0 position-relative"
             onClick={() => navigate(-1)}
             aria-label="Carrito"
           >
@@ -35,7 +37,12 @@ export function Header() {
               <path d="M16 10a4 4 0 0 1-8 0"/>
             </svg>
             {totalItems > 0 && (
-              <span className="tk-header__cart-badge">{totalItems}</span>
+              <span
+                className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary"
+                style={{ fontSize: '0.6rem' }}
+              >
+                {totalItems}
+              </span>
             )}
           </button>
         </nav>
