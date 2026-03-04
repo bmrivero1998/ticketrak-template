@@ -78,6 +78,18 @@ export async function createReservation(payload: ReserveRequest): Promise<Reserv
   })
 }
 
+export async function getHandshake(email:string, project_id:string) {
+  const payload ={
+    project_id,
+    email
+  } 
+   return request<ReserveResponse[]>('/tr/engine/handshake', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  
+}
+
 export async function createCheckoutSession(
   payload: CheckoutSessionRequest,
 ): Promise<CheckoutSessionResponse> {
