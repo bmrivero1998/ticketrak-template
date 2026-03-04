@@ -39,7 +39,7 @@ export const CONFIG = {
  LOCALE:externalConfig.LOCALE || 'es-MX',
  RESERVATION_TTL_MINUTES: externalConfig.RESERVATION_TTL_MINUTES || 10,
  MAX_TICKETS_PER_ORDER: externalConfig.MAX_TICKETS_PER_ORDER || 10,
-
+ MAX_FREE_TICKETS: externalConfig.MAX_FREE_TICKETS || 1,
  // ----------------------------------------------------------
  // STRIPE & CHECKOUT
  // ----------------------------------------------------------

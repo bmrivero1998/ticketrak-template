@@ -1,3 +1,8 @@
+/**
+ * Componente CheckoutPage.
+ * Procesa la orden, maneja facturación, envía donaciones personalizadas
+ * y puentea Stripe automáticamente si es gratis.
+ */
 import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loadStripe } from '@stripe/stripe-js'
@@ -12,13 +17,7 @@ const stripePromise = loadStripe(CONFIG.PUBLIC_KEY, {
   stripeAccount: CONFIG.STRIPE_ACCOUNT
 })
 
-const ChevronDown = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 9l6 6 6-6"/>
-  </svg>
-)
-
-// --- NUEVO COMPONENTE PARA PROCESAR EL PAGO ---
+// --- COMPONENTE PARA PROCESAR EL PAGO ---
 const CheckoutPaymentForm = () => {
   const stripe = useStripe()
   const elements = useElements()
@@ -65,7 +64,6 @@ const CheckoutPaymentForm = () => {
 }
 // ----------------------------------------------
 
-
 export default function CheckoutPage() {
   const navigate = useNavigate()
   const { items, totalItems, clearCart } = useCart()
@@ -77,14 +75,8 @@ export default function CheckoutPage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [wantsInvoice, setWantsInvoice] = useState(false)
   const [billing, setBilling] = useState<BillingDetails>({
-    tax_id: '',
-    legal_name: '',
-    postal_code: '',
-    address: '',
-    neighborhood: '',
-    city: '',
-    state: '',
-    tax_system: ''
+    tax_id: '', legal_name: '', postal_code: '', address: '',
+    neighborhood: '', city: '', state: '', tax_system: ''
   })
   
   const [colonias, setColonias] = useState<string[]>([])
@@ -94,7 +86,6 @@ export default function CheckoutPage() {
 
   const handlePostalCodeChange = async (cp: string) => {
     setBilling(prev => ({ ...prev, postal_code: cp }))
-
     if (cp.length === 5) {
       setLoadingCP(true)
       try {
@@ -107,9 +98,7 @@ export default function CheckoutPage() {
         
         setColonias(coloniasList)
         setBilling(prev => ({
-          ...prev,
-          state: state,
-          city: state,
+          ...prev, state: state, city: state,
           neighborhood: coloniasList.length === 1 ? coloniasList[0] : prev.neighborhood
         }))
       } catch (err) {
@@ -150,48 +139,71 @@ export default function CheckoutPage() {
     setError(null)
 
     try {
+      // 1. Crear Reservación en BD (apartar lugares y guardar montos de donación)
       const reservation = await createReservation({
         project_id: CONFIG.PROJECT_ID,
         event_id: storedEventId,
         customer_email: email.trim(),
         customer_name: customerName.trim(),
         contact_phone: contactNumber.trim(),
-        items: items.map((i) => ({ tier_id: i.tier.id, quantity: i.quantity })),
+        items: items.map((i) => ({ 
+            tier_id: i.tier.id, 
+            quantity: i.quantity,
+            donation_amount: i.tier.type === 'DONATION' 
+                ? (i.donationAmount || i.tier.min_donation_amount) 
+                : undefined
+        })),
         billing_details: wantsInvoice ? billing : undefined
       })
 
       const firstData = reservation[0];
 
+      // 2. Llamar al Checkout Handler
       const session = await createCheckoutSession({
         reservation_id: firstData.id,
         project_uuid: CONFIG.PROJECT_ID,
-        customer_data:{
-          email: email,
-          name: customerName
-        }
+        customer_data:{ email: email, name: customerName }
       })
 
+      // 3. Si es gratis, redirigimos directamente a success
+      if (session.isFree) {
+          clearCart()
+          navigate('/success', { 
+            state: { sessionToken: session.session_token } 
+          })
+          return; 
+      }
+
+      // 4. Si cuesta dinero, activamos Stripe
       if (!session.clientSecret) throw new Error('Error al iniciar el proceso de pago.')
       setClientSecret(session.clientSecret)
-      clearCart()
+      
     } catch (err: any) {
       setError(err.message ?? 'Error al procesar. Intenta de nuevo.')
       setLoading(false)
     }
   }
 
-  // 1. Mostrar Stripe Elements si ya tenemos el Payment Intent
+  // ==========================================================
+  // VISTA 1: STRIPE ELEMENTS (Muestra el resumen a la izquierda)
+  // ==========================================================
   if (clientSecret) {
     return (
       <div className="container py-4">
-        <div className="row justify-content-center">
-          <div className="col-12 col-lg-6">
-            <button className="btn btn-link text-decoration-none ps-0 mb-3" onClick={() => setClientSecret(null)}>
-              ← Corregir datos
-            </button>
-            <div className="card shadow-sm">
-              <div className="card-body p-4">
-                <h2 className="card-title h5 mb-4">Ingresa tu método de pago</h2>
+        <button className="btn btn-link text-decoration-none ps-0 mb-3" onClick={() => setClientSecret(null)}>
+          ← Corregir datos
+        </button>
+        <h1 className="h4 mb-4">Completa tu pago</h1>
+        
+        <div className="row g-4">
+          <div className="col-12 col-lg-5">
+            <CartSummary />
+          </div>
+
+          <div className="col-12 col-lg-7">
+            <div className="card shadow-sm border-0">
+              <div className="card-body p-4 bg-light rounded">
+                <h2 className="card-title h5 mb-4 text-center">Ingresa tu método de pago</h2>
                 <Elements stripe={stripePromise} options={{ clientSecret }}>
                   <CheckoutPaymentForm />
                 </Elements>
@@ -203,7 +215,9 @@ export default function CheckoutPage() {
     )
   }
 
-  // 2. Mostrar Carrito vacío si no hay items ni clientSecret activo
+  // ==========================================================
+  // VISTA 2: CARRITO VACÍO
+  // ==========================================================
   if (totalItems === 0) {
     return (
       <div className="container py-5 text-center">
@@ -213,6 +227,9 @@ export default function CheckoutPage() {
     )
   }
 
+  // ==========================================================
+  // VISTA 3: FORMULARIO DE DATOS DE CONTACTO Y FACTURACIÓN
+  // ==========================================================
   return (
     <div className="container py-4">
       <button className="btn btn-link text-decoration-none ps-0 mb-3" onClick={() => navigate(-1)}>
@@ -221,12 +238,10 @@ export default function CheckoutPage() {
       <h1 className="h4 mb-4">Confirma tu pedido</h1>
 
       <div className="row g-4">
-        {/* Resumen del carrito */}
         <div className="col-12 col-lg-5">
           <CartSummary />
         </div>
 
-        {/* Formulario */}
         <div className="col-12 col-lg-7">
           <div className="card shadow-sm">
             <div className="card-body p-4">
@@ -260,7 +275,8 @@ export default function CheckoutPage() {
                 <label className="form-label">Teléfono / WhatsApp</label>
                 <input
                   className="form-control"
-                  placeholder="5512345678"
+                  placeholder="+525512345678"
+                  maxLength={13}
                   value={contactNumber}
                   onChange={(e) => setContactNumber(e.target.value.replace(/\D/g,''))}
                   disabled={loading}
@@ -347,7 +363,6 @@ export default function CheckoutPage() {
                             <option value="">Selecciona...</option>
                             {colonias.map(c => <option key={c} value={c}>{c}</option>)}
                           </select>
-                          {/* Bootstrap maneja el chevron en form-select automáticamente */}
                         </div>
                       ) : (
                         <input

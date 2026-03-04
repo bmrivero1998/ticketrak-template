@@ -27,29 +27,28 @@ export interface EventDetail extends EventSummary {
 
 // ─── TIERS ───────────────────────────────────────────────────────────────────
 
-export interface Tier{
+export interface Tier {
     id: string
     event_id: string
     project_id: string
     name: string
-    type: "PAID" | "FREE"
+    type: "FIXED" | "FREE" | "DONATION" | "PAID" // ✅ Actualizado para coincidir con tu BD
     stock_total: number
     stock_sold: number
-    price_amount: number
-    min_donation_amount: number
+    price_amount: number // En BD se llama price_cents
+    min_donation_amount: number // En centavos
     settings: null | {
         donation_enabled: boolean
     }
     created_at: string
 }
-
 // ─── ENGINE ──────────────────────────────────────────────────────────────────
 
 export interface ReserveItem {
   tier_id: string
   quantity: number
+  donation_amount?: number // ✅ Nuevo campo para la donación (en enteros/pesos o centavos según lo mandes)
 }
-
 /**
  * Detalle de facturación opcional para la reserva
  */
@@ -102,10 +101,12 @@ export interface CheckoutSessionRequest {
 }
 
 export interface CheckoutSessionResponse {
-  url: string
-  sessionId: string
-  clientSecret: string // Necesario para Stripe Embedded Checkout
-  orderUuid:string
+  url?: string
+  sessionId?: string
+  clientSecret?: string 
+  orderUuid?: string
+  isFree?: boolean // ✅ Nuevo campo que manda el backend
+  session_token?: string // ✅ Nuevo campo que manda el backend
 }
 
 export interface CheckoutSessionStatus {
@@ -125,8 +126,8 @@ export interface Ticket {
 }
 
 // ─── CART (estado local — no viene del API) ───────────────────────────────────
-
 export interface CartItem {
   tier: Tier
   quantity: number
+  donationAmount?: number // ✅ Guardamos la donación elegida en el carrito (en centavos para evitar decimales)
 }
