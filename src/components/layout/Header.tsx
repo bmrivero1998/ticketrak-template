@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { CONFIG } from '@/config'
-import { useCart } from '@/context/CartContext'
+import { CONFIG } from '../../config'
+import { useCart } from '../../context/CartContext'
 
 export function Header() {
   const { totalItems } = useCart()

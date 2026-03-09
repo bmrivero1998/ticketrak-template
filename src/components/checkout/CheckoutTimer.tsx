@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { CONFIG } from '@/config';
+import { CONFIG } from '../../config';
 
 interface Props {
   expiresAt: string;

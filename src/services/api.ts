@@ -3,7 +3,7 @@
  * Unwrap automático de ResponseApi<T> → devuelve solo data
  */
 
-import { CONFIG } from '@/config'
+import { CONFIG } from '../config'
 import type {
   EventSummary,
   EventDetail,
@@ -15,7 +15,7 @@ import type {
   CheckoutSessionStatus,
   Ticket,
   ResponseApi,
-} from '@/types'
+} from '../types'
 
 // ─── CORE REQUEST ────────────────────────────────────────────────────────────
 

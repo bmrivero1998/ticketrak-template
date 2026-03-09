@@ -1,11 +1,11 @@
 import { useCallback, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Spinner } from '@/components/ui/Spinner'
-import { TierSelector } from '@/components/event/TierSelector'
-import { useFetch } from '@/hooks/useFetch'
-import { getEvent, getEventTiers } from '@/services/api'
-import { formatDate } from '@/config'
-import { useCart } from '@/context/CartContext'
+import { Spinner } from '../components/ui/Spinner'
+import { TierSelector } from '../components/event/TierSelector'
+import { useFetch } from '../hooks/useFetch'
+import { getEvent, getEventTiers } from '../services/api'
+import { formatDate } from '../config'
+import { useCart } from '../context/CartContext'
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -31,7 +31,7 @@ export default function EventDetailPage() {
   if (eventError || !event) return (
     <div className="container py-5 text-center text-muted">
       <p>Evento no encontrado.</p>
-      <button className="btn btn-outline-primary rounded-pill" onClick={() => navigate('/')}>
+      <button className="btn btn-outline-primary rounded-pill" onClick={() => navigate('/tickets')}>
         Volver a cartelera
       </button>
     </div>
@@ -55,7 +55,7 @@ export default function EventDetailPage() {
         >
           <button 
             className="btn btn-link text-white text-decoration-none p-0 mb-3 opacity-75" 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/tickets')}
           >
             <small className="fw-bold">← VOLVER</small>
           </button>
@@ -133,7 +133,7 @@ export default function EventDetailPage() {
             </div>
             <button
               className="btn btn-light rounded-pill px-4 fw-bold shadow-sm"
-              onClick={() => navigate('/checkout')}
+              onClick={() => navigate('/tickets/checkout')}
             >
               Comprar ahora
             </button>

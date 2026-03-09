@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useCart } from '@/context/CartContext'
-import { formatCurrency, CONFIG } from '@/config'
+import { useCart } from '../../context/CartContext'
+import { formatCurrency, CONFIG } from '../../config'
 
 const { PRIMARY, BACKGROUND, TEXT, TEXT_SECONDARY } = CONFIG.THEME
 

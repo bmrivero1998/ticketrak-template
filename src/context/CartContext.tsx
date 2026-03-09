@@ -4,8 +4,8 @@
  * y UI de alerta premium.
  */
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
-import type { CartItem, Tier } from '@/types'
-import { CONFIG } from '@/config'
+import type { CartItem, Tier } from '../types'
+import { CONFIG } from '../config'
 
 const STRIPE_MAX_CENTS = 99999900; 
 

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import type { EventSummary } from '@/types'
-import { formatDateShort } from '@/config'
+import type { EventSummary } from '../../types'
+import { formatDateShort } from '../../config'
 
 interface Props {
   event: EventSummary
