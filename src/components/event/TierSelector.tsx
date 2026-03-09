@@ -15,7 +15,7 @@ interface Props {
 const formatCurrency = (cents: number) => {
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
-    currency: 'MXN',
+    currency: CONFIG.CURRENCY,
   }).format(cents / 100)
 }
 
