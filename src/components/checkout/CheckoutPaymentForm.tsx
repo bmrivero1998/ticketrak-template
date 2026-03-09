@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js'
 
 // ─── Paso 4: Formulario de pago Stripe ───────────────────────────────────────
