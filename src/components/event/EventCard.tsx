@@ -10,6 +10,7 @@ interface Props {
 export function EventCard({ event, index = 0 }: Props) {
   return (
     <Link
+      id={`btn_tracking_event_${event.id}`}
       to={`/tickets/events/${event.id}`}
       className="card h-100 text-decoration-none text-reset border-0 shadow-sm overflow-hidden"
       style={{ animationDelay: `${index * 80}ms` }}

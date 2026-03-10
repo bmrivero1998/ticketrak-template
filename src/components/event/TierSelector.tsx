@@ -89,6 +89,7 @@ export function TierSelector({ tiers }: Props) {
                       <span className="badge bg-secondary">AGOTADO</span>
                     ) : qty === 0 ? (
                       <button
+                        id={`btn_tracking_tier_${tier.id}`}
                         className="btn btn-primary btn-sm"
                         onClick={() => addItem(tier, 1, isDonation ? tier.min_donation_amount : undefined)}
                         // 🔥 BLOQUEAMOS EL BOTÓN INICIAL SI YA LLEGÓ AL LÍMITE

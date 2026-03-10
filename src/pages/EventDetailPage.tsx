@@ -54,6 +54,7 @@ export default function EventDetailPage() {
           }}
         >
           <button 
+           id="btn_tracking_event_back"
             className="btn btn-link text-white text-decoration-none p-0 mb-3 opacity-75" 
             onClick={() => navigate('/tickets')}
           >
@@ -132,6 +133,7 @@ export default function EventDetailPage() {
               <small className="opacity-75" style={{ fontSize: '0.65rem' }}>Listos para checkout</small>
             </div>
             <button
+             id={`btn_tracking_checkout_start_${id}`}
               className="btn btn-light rounded-pill px-4 fw-bold shadow-sm"
               onClick={() => navigate('/tickets/checkout')}
             >

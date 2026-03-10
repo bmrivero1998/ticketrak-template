@@ -42,6 +42,7 @@ export const StepEmail = ({ email, loading, error, onEmailChange, onNext }: Step
 
       <button
         className="btn btn-primary w-100 btn-lg mt-2"
+        id="btn_tracking_checkout_ticketrak_step1_next"
         onClick={onNext}
         disabled={loading}
       >
