@@ -82,9 +82,13 @@ export default function EventDetailPage() {
 
             <div className="description-box mb-5">
               <h3 className="h6 text-uppercase fw-bold mb-3 opacity-50" style={{ letterSpacing: '1px' }}>Detalles</h3>
-              <p className="fs-6 lh-lg opacity-75" style={{ whiteSpace: 'pre-line' }}>
-                {event.description || 'Sin descripción disponible para este evento.'}
-              </p>
+              {event.description
+                ? <div
+                    className="event-description fs-6 lh-lg opacity-75"
+                    dangerouslySetInnerHTML={{ __html: event.description }}
+                  />
+                : <p className="fs-6 lh-lg opacity-75">Sin descripción disponible para este evento.</p>
+              }  
               
               {event.address && (
                 <div className="mt-4 p-3 rounded-3 border border-secondary border-opacity-10 bg-secondary bg-opacity-10">
