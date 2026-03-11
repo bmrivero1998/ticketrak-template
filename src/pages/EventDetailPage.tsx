@@ -83,10 +83,13 @@ export default function EventDetailPage() {
 
             <div className="description-box mb-5">
               <h3 className="h6 text-uppercase fw-bold mb-3 opacity-50" style={{ letterSpacing: '1px' }}>Detalles</h3>
-              <p className="fs-6 lh-lg opacity-75" style={{ whiteSpace: 'pre-line' }}>
-                {event.description || 'Sin descripción disponible para este evento.'}
-              </p>
-              
+              {event.description
+                ? <div
+                    className="event-description fs-6 lh-lg opacity-75"
+                    dangerouslySetInnerHTML={{ __html: event.description }}
+                  />
+                : <p className="fs-6 lh-lg opacity-75">Sin descripción disponible para este evento.</p>
+              }  
               {event.address && (
                 <div className="mt-4 p-3 rounded-3 border border-secondary border-opacity-10 bg-secondary bg-opacity-10">
                   <small className="d-block text-primary fw-bold mb-1">UBICACIÓN</small>
@@ -147,6 +150,41 @@ export default function EventDetailPage() {
         .animate-in { animation: fadeIn 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .border-opacity-10 { border-color: rgba(var(--bs-primary-rgb), 0.1) !important; }
+         .animate-in { animation: fadeIn 0.5s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .border-opacity-10 { border-color: rgba(var(--bs-primary-rgb), 0.1) !important; }
+
+  /* ── Estilos para HTML inyectado desde el editor ── */
+  .event-description h1,
+  .event-description h2,
+  .event-description h3 { font-weight: 600; margin: 1em 0 0.4em; }
+  .event-description p { margin-bottom: 0.6em; }
+  .event-description a { color: var(--bs-primary); text-decoration: underline; }
+  .event-description strong { font-weight: 700; }
+  .event-description em { font-style: italic; }
+  .event-description u { text-decoration: underline; }
+  .event-description s { text-decoration: line-through; }
+  .event-description ul, .event-description ol { padding-left: 1.5rem; margin-bottom: 0.75em; }
+  .event-description li { margin-bottom: 0.25em; }
+  .event-description blockquote {
+    border-left: 3px solid var(--bs-primary);
+    padding-left: 1em;
+    margin: 0.75em 0;
+    opacity: 0.8;
+  }
+  .event-description pre {
+    background: rgba(0,0,0,0.2);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85em;
+    overflow-x: auto;
+  }
+  .event-description img { max-width: 100%; border-radius: 8px; margin: 0.5em 0; }
+  .event-description table { width: 100%; border-collapse: collapse; margin: 0.75em 0; }
+  .event-description td, .event-description th {
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 0.5rem 0.75rem;
+  }
       `}</style>
     </div>
   )
