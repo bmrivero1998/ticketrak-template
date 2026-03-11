@@ -37,15 +37,15 @@ export const CONFIG = {
  // ----------------------------------------------------------
  // UI & LOCALIZACIÓN
  // ----------------------------------------------------------
- CURRENCY: externalConfig.CURRENCY || 'EUR',
- LOCALE:externalConfig.LOCALE || 'es-ES',
+ CURRENCY: externalConfig.CURRENCY || 'MXN',
+ LOCALE:externalConfig.LOCALE || 'es-MX',
  RESERVATION_TTL_MINUTES: externalConfig.RESERVATION_TTL_MINUTES || 10,
  MAX_TICKETS_PER_ORDER: externalConfig.MAX_TICKETS_PER_ORDER || 10,
  MAX_FREE_TICKETS: externalConfig.MAX_FREE_TICKETS || 1,
  // ----------------------------------------------------------
  // STRIPE & CHECKOUT
  // ----------------------------------------------------------
- SITE_URL: externalConfig.SITE_URL || 'http://hadadanza.metritrak.com',
+ SITE_URL: externalConfig.SITE_URL || 'http://inshow.metritrak.com',
  PUBLIC_KEY: externalConfig.PUBLIC_KEY || 'pk_test_51Rjrn9Q7rhLBuE2WtlgmxYdM1qYMuku9y7fNTBq5VblSsqzxOJyxeCVrByrnJkzYGbtTUFnlV3JjcaEn3657hm6000X2SBZZ4O',
  STRIPE_ACCOUNT: externalConfig.STRIPE_ACCOUNT || 'acct_1SueuhQ7rhbnDgY2',
 
