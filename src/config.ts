@@ -21,7 +21,7 @@ export const CONFIG = {
  // ----------------------------------------------------------
  // BRANDING & THEME (Shadow DOM Friendly)
  // ----------------------------------------------------------
- BRAND_NAME: externalConfig.BRAND_NAME || 'Hadadanza ',
+ BRAND_NAME: externalConfig.BRAND_NAME || 'INSHOW ',
  BRAND_TAGLINE: externalConfig.BRAND_TAGLINE || 'Vive la experiencia.',
  LOGO_URL: externalConfig.LOGO_URL || '/images/logotipo.png',
 
