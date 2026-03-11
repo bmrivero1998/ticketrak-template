@@ -14,7 +14,7 @@ export const CONFIG = {
  // API & PROYECTO
  // ----------------------------------------------------------
  API_URL: externalConfig.API_URL || 'https://metritrak-workers.kripto-bmrp.workers.dev/v1',
- PROJECT_ID: externalConfig.PROJECT_ID || '254a0c48-7f00-4f62-bcc1-b0febed2965e',
+ PROJECT_ID: externalConfig.PROJECT_ID || '14b5a4d9-a8aa-46ef-8853-ce922c118a5f',
  STRIPE_PUBLIC_KEY: 'pk_test_51Rjrn9Q7rhLBuE2WtlgmxYdM1qYMuku9y7fNTBq5VblSsqzxOJyxeCVrByrnJkzYGbtTUFnlV3JjcaEn3657hm6000X2SBZZ4O',
  STRIPE_ACCOUNT_ID: 'acct_1SueuhQ7rhbnDgY2',
 
