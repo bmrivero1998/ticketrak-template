@@ -58,7 +58,7 @@ export async function getEvents(): Promise<EventSummary[]> {
   if (CONFIG.PROJECT_ID) params.set('project_id', CONFIG.PROJECT_ID)
   if (!CONFIG.SHOW_PAST_EVENTS) params.set('status', 'PUBLISHED')
 
-  return request<EventSummary[]>(`/tr/events?${params.toString()}`)
+  return request<EventSummary[]>(`/tr/events/public?${params.toString()}`)
 }
 
 export async function getEvent(id: string): Promise<EventDetail> {
@@ -100,7 +100,7 @@ export async function createCheckoutSession(
 }
 
 export async function getCheckoutStatus(sessionId: string): Promise<CheckoutSessionStatus> {
-  return request<CheckoutSessionStatus>(`/tr/engine/handshacke/${sessionId}`)
+  return request<CheckoutSessionStatus>(`/tr/engine/handshake/${sessionId}`)
 }
 
 // ─── VAULT ───────────────────────────────────────────────────────────────────
