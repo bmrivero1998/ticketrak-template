@@ -106,7 +106,7 @@ export default function EventDetailPage() {
 
           {/* Selector de Tickets */}
           <div className="col-lg-5">
-            <div className="sticky-top" style={{ top: '2rem' }}>
+            <div className="sticky-top" style={{ top: '100px', zIndex: 10 }}>
               <div className="p-4 rounded-4 border border-secondary border-opacity-25 shadow-sm" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
                 <h2 className="h5 fw-bold mb-4 d-flex align-items-center">
                    <span className="text-primary me-2">🎟️</span> Boletos
