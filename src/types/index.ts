@@ -17,6 +17,13 @@ export interface EventSummary {
   venue_name: string
   poster_image_url: string
   start_date: string // ISO 8601
+  slug: string
+  currency: string // Nuevo campo para la moneda del evento (ej. "MXN", "USD")
+  genre?: string // Nuevo campo opcional para el género o categoría del evento
+  city?: string // Nuevo campo opcional para la ciudad del evento
+  artist_name?: string // Nuevo campo opcional para el nombre del artista principal
+  location_address?: string // Nuevo campo opcional para la dirección del evento
+  project_id: string // Nuevo campo para el ID del proyecto asociado al evento
 }
 
 export interface EventDetail extends EventSummary {
@@ -127,7 +134,36 @@ export interface Ticket {
 
 // ─── CART (estado local — no viene del API) ───────────────────────────────────
 export interface CartItem {
-  tier: Tier
-  quantity: number
-  donationAmount?: number // ✅ Guardamos la donación elegida en el carrito (en centavos para evitar decimales)
+  tier: Tier;
+  quantity: number;
+  donationAmount?: number;
+  currency: string; // 🔥 Nueva propiedad
+  project_id: string; // 🔥 Nueva propiedad
+  event_id: string; // 🔥 Nueva propiedad
+  event_name: string
+  event_poster?: string
+}
+
+export interface EventDataVault {
+    event_id:            string;
+    event_name:          string;
+    event_slug:          string;
+    event_date:          string;
+    venue_name:          string;
+    poster_image_url:    string;
+    ticket_bg_image_url: string;
+    status:              string;
+    tickets:             Ticket[];
+}
+
+export interface TicketVault {
+    ticket_id:     string;
+    tier_name:     string;
+    tier_type:     string;
+    secret_token:  string;
+    status:        string;
+    amount_paid:   number;
+    qr_payload:    string;
+    gw_saved_link: string;
+    created_at:    Date;
 }

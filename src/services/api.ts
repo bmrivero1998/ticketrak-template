@@ -1,6 +1,6 @@
 /**
  * Cliente HTTP de Ticketrak Public API
- * Unwrap automático de ResponseApi<T> → devuelve solo data
+ * Centraliza la comunicación con Marketplace, Engine y Vault.
  */
 
 import { CONFIG } from '@/config'
@@ -19,6 +19,10 @@ import type {
 
 // ─── CORE REQUEST ────────────────────────────────────────────────────────────
 
+/**
+ * Función base para peticiones privadas y públicas.
+ * Maneja automáticamente la inyección del token de Fan si existe.
+ */
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${CONFIG.API_URL}${path}`
 
@@ -27,8 +31,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers.set('Content-Type', 'application/json')
   }
 
-  const fanToken = sessionStorage.getItem('fan_token')
-  if (fanToken) headers.set('Authorization', `Bearer ${fanToken}`)
+  // ✅ UNIFICACIÓN: Siempre leemos el token de la bóveda (Vault) desde localStorage
+  const fanToken = localStorage.getItem('MT_FAN_TOKEN')
+  if (fanToken) {
+    headers.set('Authorization', `Bearer ${fanToken}`)
+  }
 
   const res = await fetch(url, { ...options, headers })
 
@@ -41,35 +48,49 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(json.error ?? `Error ${res.status}`)
   }
 
-  // ✅ CASO 1: ResponseApi<T>
+  // Caso 1: Estructura estándar de Metritrak { success: true, data: T }
   if ('data' in json) {
     return json.data as T
   }
 
-  // ✅ CASO 2: Response plano (checkout)
+  // Caso 2: Respuesta plana (usada en algunos endpoints de checkout)
   const { success, error, ...rest } = json
   return rest as T
 }
 
-// ─── EVENTS ──────────────────────────────────────────────────────────────────
+// ─── MARKETPLACE & EVENTS ────────────────────────────────────────────────────
 
-export async function getEvents(): Promise<EventSummary[]> {
+/**
+ * Obtiene la lista global de eventos para el Marketplace (Ticketplace).
+ */
+export async function getMarketplaceEvents(
+  search: string = '',
+  limit: number = 50,
+  offset: number = 0
+): Promise<EventSummary[]> {
   const params = new URLSearchParams()
-  if (CONFIG.PROJECT_ID) params.set('project_id', CONFIG.PROJECT_ID)
-  if (!CONFIG.SHOW_PAST_EVENTS) params.set('status', 'PUBLISHED')
+  if (search) params.set('search', search)
+  params.set('limit', limit.toString())
+  params.set('offset', offset.toString())
 
-  return request<EventSummary[]>(`/tr/events?${params.toString()}`)
+  return request<EventSummary[]>(`/tr/ticketplace/list?${params.toString()}`)
 }
 
-export async function getEvent(id: string): Promise<EventDetail> {
-  return request<EventDetail>(`/tr/events/${id}`)
+/**
+ * Obtiene el detalle público de un evento por su slug.
+ */
+export async function getEventBySlug(slug: string): Promise<EventDetail> {
+  return request<EventDetail>(`/tr/ticketplace/e/${slug}`)
 }
 
+/**
+ * Obtiene los tipos de boletos (tiers) de un evento.
+ */
 export async function getEventTiers(eventId: string): Promise<Tier[]> {
   return request<Tier[]>(`/tr/events/${eventId}/tiers`)
 }
 
-// ─── ENGINE ──────────────────────────────────────────────────────────────────
+// ─── ENGINE (Checkout y Reservas) ────────────────────────────────────────────
 
 export async function createReservation(payload: ReserveRequest): Promise<ReserveResponse[]> {
   return request<ReserveResponse[]>('/tr/engine/reserve', {
@@ -78,16 +99,11 @@ export async function createReservation(payload: ReserveRequest): Promise<Reserv
   })
 }
 
-export async function getHandshake(email:string, project_id:string) {
-  const payload ={
-    project_id,
-    email
-  } 
-   return request<ReserveResponse[]>('/tr/engine/handshake', {
+export async function getHandshake(email: string, project_id: string) {
+  return request<ReserveResponse[]>('/tr/engine/handshake', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ email, project_id }),
   })
-  
 }
 
 export async function createCheckoutSession(
@@ -103,28 +119,50 @@ export async function getCheckoutStatus(sessionId: string): Promise<CheckoutSess
   return request<CheckoutSessionStatus>(`/tr/engine/handshacke/${sessionId}`)
 }
 
-// ─── VAULT ───────────────────────────────────────────────────────────────────
+// ─── VAULT (Acceso para Fans / Compradores) ──────────────────────────────────
 
-export async function requestVaultCode(email: string): Promise<void> {
-  await request<void>('/tr/vault/request-code', {
+/**
+ * Solicita el código OTP al correo del Fan.
+ */
+export const requestVaultCode = async (email: string) => {
+  return request<any>('/tr/vault/request-code', {
     method: 'POST',
     body: JSON.stringify({ email }),
   })
 }
 
-export async function vaultLogin(
-  email: string,
-  code: string,
-): Promise<{ token: string; user: { email: string; name: string } }> {
-  const data = await request<{ token: string; user: { email: string; name: string } }>(
-    '/tr/vault/login',
-    { method: 'POST', body: JSON.stringify({ email, code }) },
-  )
-
-  sessionStorage.setItem('fan_token', data.token)
+/**
+ * Realiza el login con el código OTP y guarda el token.
+ */
+export const vaultLogin = async (email: string, code: string) => {
+  const data = await request<{ token: string; user: any }>('/tr/vault/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, code }),
+  })
+  
+  if (data.token) {
+    localStorage.setItem('MT_FAN_TOKEN', data.token)
+  }
   return data
 }
 
-export async function getMyTickets(): Promise<{ event: EventSummary; tickets: Ticket[] }> {
-  return request<{ event: EventSummary; tickets: Ticket[] }>('/tr/vault/tickets')
+/**
+ * Obtiene las órdenes y boletos del Fan autenticado.
+ */
+export async function getMyTickets(): Promise<any> {
+  return request<any>('/tr/vault/tickets')
 }
+
+/**
+ * Genera la URL para añadir un boleto específico a Google Wallet.
+ */
+export async function getTicketGoogleWallet(ticketId: string): Promise<{ url: string }> {
+  return request<{ url: string }>(`/tr/vault/ticket/${ticketId}/google-wallet`)
+}
+
+
+// En api.ts
+export async function getPublicSettings(eventId: string): Promise<{ stripe_public_key: string; stripe_account?: string }> {
+  return request<{ stripe_public_key: string; stripe_account?: string }>(`/tr/ticketplace/e/${eventId}/settings`)
+}
+

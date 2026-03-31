@@ -82,3 +82,18 @@ export const formatDateShort = (iso: string): string =>
   month: 'short',
   year: 'numeric',
  }).format(new Date(iso));
+
+
+ export function formatEventDate(dateString: string): string {
+  const date = new Date(dateString)
+
+  return new Intl.DateTimeFormat('es-MX', {
+    weekday: 'short',   // jue
+    day: '2-digit',     // 26
+    month: 'short',     // mar
+    year: 'numeric',    // 2026
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }).format(date)
+}

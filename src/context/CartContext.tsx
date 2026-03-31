@@ -1,170 +1,358 @@
 /**
- * CartProvider con Sistema de Notificaciones de Alto Impacto.
- * Implementa validaciones de negocio (donaciones, límites globales y de boletos gratuitos)
- * y UI de alerta premium.
+ * CartProvider Contextual (Multi-Evento).
+ * Cada evento mantiene su propio carrito independiente en el storage.
  */
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
+
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  type ReactNode,
+} from 'react'
 import type { CartItem, Tier } from '@/types'
 import { CONFIG } from '@/config'
 
-const STRIPE_MAX_CENTS = 99999900; 
+const STRIPE_MAX_CENTS = 99999900
+
+// 🔥 Tipo multi-evento
+type MultiEventCart = Record<string, CartItem[]>
 
 interface CartContextValue {
   items: CartItem[]
   totalCents: number
   totalItems: number
+  cartMap: MultiEventCart
   toast: { message: string; show: boolean; type: 'error' | 'info' }
-  addItem: (tier: Tier, quantity: number, donationAmount?: number) => void
+
+  addItem: (
+  tier: Tier,
+  quantity: number,
+  event_id: string,
+  project_id: string,
+  event_name: string, // 👈 nuevo
+  event_poster?: string, // 👈 nuevo
+  donationAmount?: number,
+  currency?: string
+) => void
+
   removeItem: (tierId: string) => void
   updateQuantity: (tierId: string, quantity: number) => void
   updateDonation: (tierId: string, amount: number) => void
   clearCart: () => void
   hideToast: () => void
+  removeEventCart: (eventId: string) => void
 }
 
 const CartContext = createContext<CartContextValue | null>(null)
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('MT_CART_SESSION');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // 🧠 Estado global
+  const [cartMap, setCartMap] = useState<MultiEventCart>(() => {
+    const saved = localStorage.getItem('MT_MULTI_CART')
+    return saved ? JSON.parse(saved) : {}
+  })
 
-  const [toast, setToast] = useState({ message: '', show: false, type: 'error' as const });
+  const [toast, setToast] = useState({
+    message: '',
+    show: false,
+    type: 'error' as const,
+  })
 
-  const triggerAlert = (message: string) => {
-    setToast({ message, show: true, type: 'error' });
-    // Vibración haptica si el dispositivo lo permite
-    if (window.navigator.vibrate) window.navigator.vibrate(50);
-    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
-  };
+  // 🎯 Evento activo
+  const [activeEventId, setActiveEventId] = useState<string | null>(
+    sessionStorage.getItem('current_event_id')
+  )
 
+  // 🔄 Sync sessionStorage
   useEffect(() => {
-    localStorage.setItem('MT_CART_SESSION', JSON.stringify(items));
-  }, [items]);
+    const sync = () => {
+      setActiveEventId(sessionStorage.getItem('current_event_id'))
+    }
 
-  // Se calcula el total respetando las donaciones y los boletos de precio fijo
+    window.addEventListener('storage', sync)
+    const interval = setInterval(sync, 1000)
+
+    return () => {
+      window.removeEventListener('storage', sync)
+      clearInterval(interval)
+    }
+  }, [])
+
+  // 💾 Persistencia
+  useEffect(() => {
+    localStorage.setItem('MT_MULTI_CART', JSON.stringify(cartMap))
+  }, [cartMap])
+
+  // 🎟️ Items del evento activo
+  const items = useMemo(() => {
+    return activeEventId ? cartMap[activeEventId] || [] : []
+  }, [cartMap, activeEventId])
+
+  // ⚠️ Toast
+  const triggerAlert = (message: string) => {
+    setToast({ message, show: true, type: 'error' })
+    if (navigator.vibrate) navigator.vibrate(50)
+
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, show: false }))
+    }, 4000)
+  }
+
+  // 💰 Totales
   const totalCents = items.reduce((sum, i) => {
-    const itemPrice = i.tier.type === 'DONATION' ? (i.donationAmount || i.tier.min_donation_amount) : i.tier.price_amount;
-    return sum + (itemPrice * i.quantity);
-  }, 0);
+    const price =
+      i.tier.type === 'DONATION'
+        ? i.donationAmount || i.tier.min_donation_amount
+        : i.tier.price_amount
+
+    return sum + price * i.quantity
+  }, 0)
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0)
 
-  const addItem = useCallback((tier: Tier, quantity: number, donationAmount?: number) => {
-    setItems((prev) => {
-      const existing = prev.find((i) => i.tier.id === tier.id)
-      
-      // Validación 1: Límite Global de Boletos
-      const potentialGlobalTotal = prev.reduce((sum, i) => sum + i.quantity, 0) + quantity;
-      if (potentialGlobalTotal > CONFIG.MAX_TICKETS_PER_ORDER) {
-        triggerAlert(`¡Límite alcanzado! Máximo ${CONFIG.MAX_TICKETS_PER_ORDER} boletos por orden.`);
-        return prev;
-      }
+  // ➕ Agregar
+const addItem = useCallback((
+  tier: Tier,
+  quantity: number,
+  event_id: string,
+  project_id: string,
+  event_name: string,
+  event_poster?: string,
+  donationAmount?: number,
+  currency: string = 'MXN'
+) => {
+      setCartMap((prev) => {
+        const currentItems = prev[event_id] || []
+        const existing = currentItems.find((i) => i.tier.id === tier.id)
 
-      // 🔥 Validación 2: Límite específico para boletos GRATIS
-      if (tier.type === 'FREE') {
-        const currentFreeCount = prev.reduce((sum, i) => i.tier.type === 'FREE' ? sum + i.quantity : sum, 0);
-        if (currentFreeCount + quantity > CONFIG.MAX_FREE_TICKETS) {
-          triggerAlert(`Solo puedes pedir hasta ${CONFIG.MAX_FREE_TICKETS} boleto(s) gratis por orden.`);
-          return prev;
+        const currentTotal = currentItems.reduce((s, i) => s + i.quantity, 0)
+
+        if (currentTotal + quantity > CONFIG.MAX_TICKETS_PER_ORDER) {
+          triggerAlert(
+            `Límite de ${CONFIG.MAX_TICKETS_PER_ORDER} boletos alcanzado`
+          )
+          return prev
         }
-      }
 
-      // Validación 3: Límite de monto máximo para Stripe
-      const priceToAdd = tier.type === 'DONATION' ? (donationAmount || tier.min_donation_amount) : tier.price_amount;
-      if (totalCents + (priceToAdd * quantity) > STRIPE_MAX_CENTS) {
-        triggerAlert("Monto máximo excedido. Por seguridad, reduce la cantidad.");
-        return prev;
-      }
+        if (tier.type === 'FREE') {
+          const freeCount = currentItems.reduce(
+            (s, i) => (i.tier.type === 'FREE' ? s + i.quantity : s),
+            0
+          )
 
-      // Cálculos de inventario y agregar
-      const availableStock = tier.stock_total - tier.stock_sold;
-      const newQty = Math.min((existing?.quantity || 0) + quantity, CONFIG.MAX_TICKETS_PER_ORDER, availableStock);
-
-      if (existing) {
-          return prev.map((i) => (i.tier.id === tier.id ? { ...i, quantity: newQty, donationAmount: donationAmount || i.donationAmount } : i));
-      }
-      return [...prev, { tier, quantity: newQty, donationAmount: donationAmount || (tier.type === 'DONATION' ? tier.min_donation_amount : 0) }];
-    })
-  }, [totalCents])
-
-  const updateQuantity = useCallback((tierId: string, quantity: number) => {
-    setItems((prev) => {
-      if (quantity <= 0) return prev.filter((i) => i.tier.id !== tierId);
-      const item = prev.find(i => i.tier.id === tierId);
-      if (!item) return prev;
-
-      // 🔥 Validación 1: Límite específico para boletos GRATIS al actualizar desde los botones + y -
-      if (item.tier.type === 'FREE') {
-        // Sumamos los gratis de otros tiers (por si el evento tiene varios tipos de boletos gratis)
-        const otherFreeCount = prev.reduce((sum, i) => (i.tier.type === 'FREE' && i.tier.id !== tierId) ? sum + i.quantity : sum, 0);
-        if (otherFreeCount + quantity > CONFIG.MAX_FREE_TICKETS) {
-          triggerAlert(`Solo puedes pedir hasta ${CONFIG.MAX_FREE_TICKETS} boleto(s) gratis por orden.`);
-          return prev;
-        }
-      }
-
-      // Validación 2: Límite de Stripe
-      const itemPrice = item.tier.type === 'DONATION' ? (item.donationAmount || item.tier.min_donation_amount) : item.tier.price_amount;
-      if (totalCents + (itemPrice * (quantity - item.quantity)) > STRIPE_MAX_CENTS) {
-        triggerAlert("Límite de pago alcanzado.");
-        return prev;
-      }
-
-      // Validación 3: Límite Global
-      const newGlobal = prev.reduce((sum, i) => sum + (i.tier.id === tierId ? quantity : i.quantity), 0);
-      if (newGlobal > CONFIG.MAX_TICKETS_PER_ORDER) {
-        triggerAlert(`Solo puedes comprar hasta ${CONFIG.MAX_TICKETS_PER_ORDER} boletos.`);
-        return prev;
-      }
-
-      return prev.map((i) => i.tier.id === tierId ? { ...i, quantity: Math.min(quantity, i.tier.stock_total - i.tier.stock_sold) } : i);
-    })
-  }, [totalCents])
-
-  const updateDonation = useCallback((tierId: string, amount: number) => {
-      setItems(prev => prev.map(item => {
-          if (item.tier.id === tierId) {
-              const validAmount = Math.max(amount, item.tier.min_donation_amount);
-              return { ...item, donationAmount: validAmount };
+          if (freeCount + quantity > CONFIG.MAX_FREE_TICKETS) {
+            triggerAlert(
+              `Máximo ${CONFIG.MAX_FREE_TICKETS} cortesías`
+            )
+            return prev
           }
-          return item;
-      }));
-  }, []);
+        }
 
-  const removeItem = (id: string) => setItems(p => p.filter(i => i.tier.id !== id));
-  const clearCart = () => { setItems([]); localStorage.removeItem('MT_CART_SESSION'); };
-  const hideToast = () => setToast(prev => ({ ...prev, show: false }));
+        const available = tier.stock_total - tier.stock_sold
+        const newQty = Math.min(
+          (existing?.quantity || 0) + quantity,
+          CONFIG.MAX_TICKETS_PER_ORDER,
+          available
+        )
 
+        let newItems
+
+        if (existing) {
+          newItems = currentItems.map((i) =>
+            i.tier.id === tier.id
+              ? {
+                  ...i,
+                  quantity: newQty,
+                  event_name: existing.event_name || event_name,
+                  event_poster: existing.event_poster || event_poster,
+                  donationAmount:
+                    donationAmount || i.donationAmount,
+                }
+              : i
+          )
+        } else {
+          newItems = [
+            ...currentItems,
+            {
+              tier,
+              quantity: newQty,
+              donationAmount:
+                donationAmount ||
+                (tier.type === 'DONATION'
+                  ? tier.min_donation_amount
+                  : 0),
+              currency,
+              project_id,
+              event_id,
+               event_name,
+              event_poster
+            },
+          ]
+        }
+
+        return { ...prev, [event_id]: newItems }
+      })
+    },
+    []
+  )
+
+  // 🔄 Update qty
+  const updateQuantity = useCallback(
+    (tierId: string, quantity: number) => {
+      if (!activeEventId) return
+
+      setCartMap((prev) => {
+        const current = prev[activeEventId] || []
+
+        if (quantity <= 0) {
+          return {
+            ...prev,
+            [activeEventId]: current.filter(
+              (i) => i.tier.id !== tierId
+            ),
+          }
+        }
+
+        return {
+          ...prev,
+          [activeEventId]: current.map((i) =>
+            i.tier.id === tierId
+              ? {
+                  ...i,
+                  quantity: Math.min(
+                    quantity,
+                    i.tier.stock_total - i.tier.stock_sold,
+                    CONFIG.MAX_TICKETS_PER_ORDER
+                  ),
+                }
+              : i
+          ),
+        }
+      })
+    },
+    [activeEventId]
+  )
+
+  // 💸 Donation
+  const updateDonation = useCallback(
+    (tierId: string, amount: number) => {
+      if (!activeEventId) return
+
+      setCartMap((prev) => ({
+        ...prev,
+        [activeEventId]: (prev[activeEventId] || []).map((i) =>
+          i.tier.id === tierId
+            ? {
+                ...i,
+                donationAmount: Math.max(
+                  amount,
+                  i.tier.min_donation_amount
+                ),
+              }
+            : i
+        ),
+      }))
+    },
+    [activeEventId]
+  )
+
+  // ❌ Remove
+  const removeItem = (tierId: string) => {
+    if (!activeEventId) return
+
+    setCartMap((prev) => ({
+      ...prev,
+      [activeEventId]: (prev[activeEventId] || []).filter(
+        (i) => i.tier.id !== tierId
+      ),
+    }))
+  }
+
+  const removeEventCart = useCallback((eventId: string) => {
+  setCartMap((prev) => {
+    const copy = { ...prev }
+    delete copy[eventId]
+    return copy
+  })
+}, [])
+
+  // 🧹 Clear
+  const clearCart = () => {
+    if (!activeEventId) return
+
+    setCartMap((prev) => {
+      const copy = { ...prev }
+      delete copy[activeEventId]
+      return copy
+    })
+  }
+
+  const hideToast = () =>
+    setToast((prev) => ({ ...prev, show: false }))
+
+  // ✅ RETURN CORRECTO (esto te faltaba)
   return (
-    <CartContext.Provider value={{ items, totalCents, totalItems, toast, addItem, removeItem, updateQuantity, updateDonation, clearCart, hideToast }}>
+    <CartContext.Provider
+      value={{
+        items,
+        totalCents,
+        totalItems,
+        cartMap, // 🔥 CLAVE
+        toast,
+        addItem,
+        removeItem,
+        updateQuantity,
+        updateDonation,
+        clearCart,
+        removeEventCart,
+        hideToast,
+      }}
+    >
       {children}
-      
-      {/* ── ALERTA DE IMPACTO ── */}
-      <div 
-        className={`fixed-top d-flex justify-content-center pt-4 px-3 ${toast.show ? 'v-show' : 'v-hide'}`}
-        style={{ zIndex: 9999, pointerEvents: 'none', transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}
+
+      {/* 🔥 Toast */}
+      <div
+        className={`fixed-top d-flex justify-content-center pt-4 px-3 ${
+          toast.show ? 'v-show' : 'v-hide'
+        }`}
+        style={{
+          zIndex: 9999,
+          pointerEvents: 'none',
+          transition: 'all 0.4s',
+        }}
       >
-        <div 
+        <div
           className="d-flex align-items-center gap-3 p-3 rounded-4 shadow-lg border-start border-4 border-danger"
-          style={{ 
+          style={{
             pointerEvents: 'auto',
-            background: '#1a1a1a', 
+            background: '#1a1a1a',
             minWidth: '320px',
-            maxWidth: '90vw',
             color: '#fff',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
           }}
         >
-          <div className="bg-danger rounded-circle d-flex align-items-center justify-content-center" style={{ width: '32px', height: '32px', flexShrink: 0 }}>
-             <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+          <div
+            className="bg-danger rounded-circle d-flex align-items-center justify-content-center"
+            style={{ width: '32px', height: '32px' }}
+          >
+            ⚠️
           </div>
-          <div className="flex-grow-1">
-            <h6 className="mb-0 fw-bold small text-danger">ATENCIÓN</h6>
-            <p className="mb-0 small opacity-75">{toast.message}</p>
+
+          <div>
+            <h6 className="mb-0 fw-bold small text-danger">
+              ERROR
+            </h6>
+            <p className="mb-0 small opacity-75">
+              {toast.message}
+            </p>
           </div>
-          <button onClick={hideToast} className="btn-close btn-close-white small opacity-50"></button>
+
+          <button
+            onClick={hideToast}
+            className="btn-close btn-close-white ms-auto"
+          />
         </div>
       </div>
 
@@ -177,7 +365,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 }
 
 export function useCart() {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error('useCart must be used within CartProvider');
-  return ctx;
+  const ctx = useContext(CartContext)
+  if (!ctx)
+    throw new Error('useCart must be used within CartProvider')
+  return ctx
 }

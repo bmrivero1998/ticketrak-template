@@ -3,24 +3,37 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Spinner } from '@/components/ui/Spinner'
 import { TierSelector } from '@/components/event/TierSelector'
 import { useFetch } from '@/hooks/useFetch'
-import { getEvent, getEventTiers } from '@/services/api'
+import { getEventBySlug, getEventTiers } from '@/services/api'
 import { formatDate } from '@/config'
 import { useCart } from '@/context/CartContext'
+import { PiNavigationArrow, PiMapPinFill, PiCalendarFill } from 'react-icons/pi';
+import { BiMap, BiCompass, BiDirections } from 'react-icons/bi';
+import { FaLocationDot } from 'react-icons/fa6';
+import { MdOutlineLocationOn } from 'react-icons/md';
 
 export default function EventDetailPage() {
-  const { id } = useParams<{ id: string }>()
+  // Ahora extraemos el 'slug' de la URL en lugar del 'id'
+  const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const { totalItems } = useCart()
 
+  // 1. Fetch del evento usando el slug
+  const eventFetcher = useCallback(() => getEventBySlug(slug!), [slug])
+  const { data: event, loading: loadingEvent, error: eventError } = useFetch(eventFetcher, [slug])
+
+  // 2. Fetch de los tiers usando el ID real del evento (depende de que el evento ya haya cargado)
+  const tiersFetcher = useCallback(() => {
+    if (!event?.id) return Promise.resolve([])
+    return getEventTiers(event.id)
+  }, [event?.id])
+  const { data: tiers, loading: loadingTiers } = useFetch(tiersFetcher, [event?.id])
+
+  // 3. Guardar el ID real en la sesión para el flujo de Checkout
   useEffect(() => {
-    if (id) sessionStorage.setItem('current_event_id', id)
-  }, [id])
-
-  const eventFetcher = useCallback(() => getEvent(id!), [id])
-  const tiersFetcher = useCallback(() => getEventTiers(id!), [id])
-
-  const { data: event, loading: loadingEvent, error: eventError } = useFetch(eventFetcher, [id])
-  const { data: tiers, loading: loadingTiers } = useFetch(tiersFetcher, [id])
+    if (event?.id) {
+      sessionStorage.setItem('current_event_id', event.id)
+    }
+  }, [event?.id])
 
   if (loadingEvent) return (
     <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
@@ -46,7 +59,6 @@ export default function EventDetailPage() {
           alt={event.name}
           className="w-100 h-100 object-fit-cover shadow-lg"
         />
-        {/* Gradiente que usa el color de fondo de tu CONFIG */}
         <div 
           className="position-absolute bottom-0 start-0 w-100 p-4 p-md-5"
           style={{ 
@@ -69,36 +81,121 @@ export default function EventDetailPage() {
           
           {/* Info del Evento */}
           <div className="col-lg-7">
-            <div className="d-flex flex-wrap gap-4 mb-5 pb-4 border-bottom border-secondary border-opacity-25">
-              <div className="d-flex flex-column">
-                <small className="text-primary fw-bold text-uppercase mb-1" style={{ fontSize: '0.7rem' }}>Fecha</small>
-                <span className="fs-5">{formatDate(event.start_date)}</span>
-              </div>
-              <div className="d-flex flex-column">
-                <small className="text-primary fw-bold text-uppercase mb-1" style={{ fontSize: '0.7rem' }}>Lugar</small>
-                <span className="fs-5">{event.venue_name}</span>
-              </div>
-            </div>
+  <div className="d-flex flex-wrap gap-4 mb-5 pb-4 border-bottom border-secondary border-opacity-25">
+    <div className="d-flex flex-column">
+      <small className="text-primary fw-bold text-uppercase mb-1 d-flex align-items-center gap-1" style={{ fontSize: '0.7rem' }}>
+        <PiCalendarFill className="me-1" /> Fecha
+      </small>
+      <span className="fs-5 fw-semibold">{formatDate(event.start_date)}</span>
+    </div>
+    
+    <div className="d-flex flex-column">
+      <small className="text-primary fw-bold text-uppercase mb-1 d-flex align-items-center gap-1" style={{ fontSize: '0.7rem' }}>
+        <FaLocationDot className="me-1" /> Lugar
+      </small>
+      {event.location_address ? (
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+            `${event.venue_name} ${event.location_address}`
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-decoration-none d-inline-flex align-items-center gap-2 ubicacion-link"
+          style={{ 
+            color: 'inherit',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#0d6efd';
+            e.currentTarget.style.transform = 'translateX(3px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'inherit';
+            e.currentTarget.style.transform = 'translateX(0)';
+          }}
+        >
+          <span className="fs-5">
+            {event.venue_name} <PiNavigationArrow className="mx-1" /> {event.location_address}
+          </span>
+          <small className="text-primary" style={{ fontSize: '0.7rem' }}>
+            <MdOutlineLocationOn className="me-1" /> Ver mapa
+          </small>
+        </a>
+      ) : (
+        <span className="fs-5 text-muted">
+          {event.venue_name || 'Ubicación no disponible'}
+        </span>
+      )}
+    </div>
+  </div>
 
-            <div className="description-box mb-5">
-              <h3 className="h6 text-uppercase fw-bold mb-3 opacity-50" style={{ letterSpacing: '1px' }}>Detalles</h3>
-              <p className="fs-6 lh-lg opacity-75" style={{ whiteSpace: 'pre-line' }}>
-                {event.description || 'Sin descripción disponible para este evento.'}
-              </p>
-              
-              {event.address && (
-                <div className="mt-4 p-3 rounded-3 border border-secondary border-opacity-10 bg-secondary bg-opacity-10">
-                  <small className="d-block text-primary fw-bold mb-1">UBICACIÓN</small>
-                  <p className="mb-2 small">{event.address}</p>
-                  {event.map_url && (
-                    <a href={event.map_url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary rounded-pill px-3">
-                      Abrir Mapa →
-                    </a>
-                  )}
-                </div>
-              )}
+  <div className="description-box mb-5">
+    <h3 className="h6 text-uppercase fw-bold mb-3 opacity-50" style={{ letterSpacing: '1px' }}>
+      Detalles
+    </h3>
+    <div 
+      className="fs-6 lh-lg opacity-75 html-content"
+      dangerouslySetInnerHTML={{ 
+        __html: event.description || 'Sin descripción disponible para este evento.' 
+      }} 
+    />
+                
+    {(event.address || event.location_address) && (
+      <div className="mt-4 p-4 rounded-4 shadow-sm border border-secondary border-opacity-10" style={{ background: 'linear-gradient(135deg, rgba(13,110,253,0.05) 0%, rgba(13,110,253,0.02) 100%)' }}>
+        <div className="d-flex align-items-start gap-3">
+          <div className="flex-shrink-0">
+            <div className="rounded-circle bg-primary bg-opacity-10 p-3">
+              <PiMapPinFill className="text-primary" style={{ fontSize: '1.3rem' }} />
             </div>
           </div>
+          <div className="flex-grow-1">
+            <small className="d-block text-primary fw-bold mb-2 text-uppercase" style={{ letterSpacing: '0.5px' }}>
+              📍 UBICACIÓN EXACTA
+            </small>
+            <p className="mb-3 small fw-medium">
+              {event.address || `${event.venue_name} - ${event.location_address}`}
+            </p>
+            <div className="d-flex gap-2 flex-wrap">
+              {(() => {
+                const searchQuery = encodeURIComponent(
+                  event.address || `${event.venue_name} ${event.location_address}`
+                );
+                const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${searchQuery}`;
+                const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${searchQuery}`;
+                
+                return (
+                  <>
+                    <a 
+                      href={mapsUrl}
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="btn btn-primary btn-sm rounded-pill px-4 d-inline-flex align-items-center gap-2"
+                      style={{ transition: 'transform 0.2s' }}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <BiMap className="me-1" />
+                      Abrir en Google Maps →
+                    </a>
+                    <a 
+                      href={directionsUrl}
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="btn btn-outline-secondary btn-sm rounded-pill px-4 d-inline-flex align-items-center gap-2"
+                    >
+                      <BiCompass className="me-1" />
+                      Cómo llegar
+                    </a>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+</div>
 
           {/* Selector de Tickets */}
           <div className="col-lg-5">
@@ -107,7 +204,12 @@ export default function EventDetailPage() {
                 <h2 className="h5 fw-bold mb-4 d-flex align-items-center">
                    <span className="text-primary me-2">🎟️</span> Boletos
                 </h2>
-                {loadingTiers ? <Spinner /> : <TierSelector tiers={tiers || []} />}
+                {loadingTiers || !event?.id ? <Spinner /> : 
+                <TierSelector 
+                tiers={tiers || []} 
+                currency={event?.currency || 'MXN'} 
+                event_id={event?.id} project_id={event?.project_id} 
+                event_name={event?.name} event_poster={event?.poster_image_url} />}
               </div>
             </div>
           </div>
@@ -145,6 +247,21 @@ export default function EventDetailPage() {
         .animate-in { animation: fadeIn 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .border-opacity-10 { border-color: rgba(var(--bs-primary-rgb), 0.1) !important; }
+        .ubicacion-link {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .html-content a {
+    color: #0d6efd;
+    text-decoration: none;
+  }
+  
+  .html-content a:hover {
+    text-decoration: underline;
+  }
       `}</style>
     </div>
   )

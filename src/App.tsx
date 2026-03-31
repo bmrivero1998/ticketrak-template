@@ -1,10 +1,13 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { CartProvider } from '@/context/CartContext';
 import { CONFIG } from '@/config';
 import HomePage from '@/pages/HomePage';
 import EventDetailPage from '@/pages/EventDetailPage';
 import CheckoutPage from '@/pages/CheckoutPage';
 import SuccessPage from '@/pages/SuccessPage';
+import { Header } from './components/layout/Header';
+import AuthPage from './pages/AuthPage';
+import VaultPage from './pages/VaultPage';
 
 // --- HELPERS ---
 const hexToRgb = (hex: string) => {
@@ -121,13 +124,20 @@ export default function App({ mode = 'full' }: AppProps) {
   return (
     <BrowserRouter>
       <CartProvider>
+        <Header />
         <style>{dynamicStyles}</style>
         <Routes>
           <Route path="/" element={<Layout><HomePage /></Layout>} />
-          <Route path="/events/:id" element={<Layout><EventDetailPage /></Layout>} />
+          
+          {/* ✅ CAMBIO CLAVE: Cambiamos /events/:id por /evento/:slug */}
+          <Route path="/evento/:slug" element={<Layout><EventDetailPage /></Layout>} />
+          <Route path="/auth" element={<Layout><AuthPage /></Layout>} />
+          <Route path="/vault" element={<Layout><VaultPage /></Layout>} />
+          
           <Route path="/checkout" element={<Layout><CheckoutPage /></Layout>} />
           <Route path="/success" element={<Layout><SuccessPage /></Layout>} />
           <Route path="*" element={<Navigate to="/" replace />} />
+          
         </Routes>
       </CartProvider>
     </BrowserRouter>
