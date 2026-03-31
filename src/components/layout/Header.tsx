@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useCart } from '@/context/CartContext'
 import { TicketVaultModal } from '../TicketVaultModal'
 import { FiShoppingCart } from 'react-icons/fi'
+import { BiUser } from 'react-icons/bi'
 
 export function Header() {
   const { cartMap } = useCart()
@@ -47,19 +48,22 @@ export function Header() {
           </Link>
 
           {/* 🔥 ACTIONS */}
-          <div className="d-flex align-items-center gap-3">
+          <div className="d-flex align-items-center gap-2 gap-sm-3">
+            {/* Link Mis Boletos - AHORA VISIBLE EN MÓVILES */}
             <Link 
               to="/auth" 
-              className="text-decoration-none x-small fw-bold text-uppercase d-none d-sm-block transition-all"
+              className="text-decoration-none fw-bold text-uppercase transition-all d-flex align-items-center gap-1"
               style={{ 
-                letterSpacing: '2px', 
+                letterSpacing: '1px', 
                 color: 'rgba(255,255,255,0.6)',
-                fontSize: '0.75rem'
+                fontSize: '0.7rem'
               }}
               onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
               onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
             >
-              Mis Boletos
+              <BiUser size={14} className="d-sm-none" />
+              <span className="d-none d-sm-inline">Mis Boletos</span>
+              <span className="d-sm-none">Boletos</span>
             </Link>
 
             {/* BOTÓN CARRITO */}
