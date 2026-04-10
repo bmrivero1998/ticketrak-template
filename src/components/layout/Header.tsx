@@ -43,7 +43,7 @@ export function Header() {
             className="text-decoration-none fs-4"
             style={{ letterSpacing: '-1px', fontWeight: 900 }}
           >
-            <span style={{ color: '#ffffff' }}>Ticket</span>
+            <span style={{ color: '#ffffff' }}>Ticke</span>
             <span style={{ color: '#f97316' }}>Trak</span>
           </Link>
 
