@@ -8,7 +8,7 @@ import SuccessPage from '@/pages/SuccessPage';
 import { Header } from './components/layout/Header';
 import AuthPage from './pages/AuthPage';
 import VaultPage from './pages/VaultPage';
-import { Footer } from './components/layout/footer';
+import { Footer } from './components/layout/Footer';
 
 import DonatePage from './pages/DonatePage';
 import { TermsPage } from './pages/TermsPage';
