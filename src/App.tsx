@@ -8,6 +8,13 @@ import SuccessPage from '@/pages/SuccessPage';
 import { Header } from './components/layout/Header';
 import AuthPage from './pages/AuthPage';
 import VaultPage from './pages/VaultPage';
+import { Footer } from './components/layout/footer';
+
+import DonatePage from './pages/DonatePage';
+import { TermsPage } from './pages/TermsPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { LegalPage } from './pages/LegalPage';
+import { ScrollToTop } from './components/ui/ScrollToTop';
 
 // --- HELPERS ---
 const hexToRgb = (hex: string) => {
@@ -24,21 +31,6 @@ function Layout({ children }: { children: React.ReactNode }) {
       <main className="container-fluid py-4" style={{ minHeight: '80vh' }}>
         {children}
       </main>
-
-      <footer className="py-5 border-top text-center mt-5">
-        <p className="text-muted mb-0" style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>
-          Tecnología de boletaje por{' '}
-          <a 
-            href="https://info.metritrak.com" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-decoration-none fw-bold"
-          >
-            <span style={{ color: '#0d6efd' }}>Metri</span>
-            <span style={{ color: '#fd7e14' }}>trak</span>
-          </a>
-        </p>
-      </footer>
     </div>
   );
 }
@@ -124,21 +116,30 @@ export default function App({ mode = 'full' }: AppProps) {
   return (
     <BrowserRouter>
       <CartProvider>
+          <ScrollToTop /> 
         <Header />
         <style>{dynamicStyles}</style>
         <Routes>
+          {/* Páginas principales */}
           <Route path="/" element={<Layout><HomePage /></Layout>} />
-          
-          {/* ✅ CAMBIO CLAVE: Cambiamos /events/:id por /evento/:slug */}
           <Route path="/evento/:slug" element={<Layout><EventDetailPage /></Layout>} />
           <Route path="/auth" element={<Layout><AuthPage /></Layout>} />
           <Route path="/vault" element={<Layout><VaultPage /></Layout>} />
-          
           <Route path="/checkout" element={<Layout><CheckoutPage /></Layout>} />
           <Route path="/success" element={<Layout><SuccessPage /></Layout>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
           
+          {/* Páginas legales */}
+          <Route path="/terms" element={<Layout><TermsPage /></Layout>} />
+          <Route path="/privacy" element={<Layout><PrivacyPage /></Layout>} />
+          <Route path="/legal" element={<Layout><LegalPage /></Layout>} />
+          
+          {/* Donaciones */}
+          <Route path="/donate" element={<Layout><DonatePage /></Layout>} />
+          
+          {/* 404 - Redirección */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <Footer/>
       </CartProvider>
     </BrowserRouter>
   );

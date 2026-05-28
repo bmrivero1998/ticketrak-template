@@ -19,6 +19,7 @@ import {
 
 import { TicketrakTimer } from '@/components/checkout/CheckoutTimer'
 import { Spinner } from '@/components/ui/Spinner'
+import { AgeVerificationModal } from '@/components/checkout/AgeVerificationModal'
 
 // ─────────────────────────────────────────────
 // Stripe Form
@@ -114,6 +115,11 @@ const [billing, setBilling] = useState({
 
 const [colonias, setColonias] = useState<string[]>([])
 const [loadingCP, setLoadingCP] = useState(false)
+
+const [ageVerified, setAgeVerified] = useState(() => {
+  // Verificar si ya confirmó edad en esta sesión
+  return sessionStorage.getItem('age_verified') === 'true'
+})
 
   // ─────────────────────────────
   // VALIDAR MULTI EVENTO
@@ -350,10 +356,27 @@ const handlePostalCodeChange = async (cp: string) => {
     )
   }
 
+const handleAgeConfirm = () => {
+  setAgeVerified(true)
+}
+
+const handleAgeReject = () => {
+  navigate('/', { 
+    state: { ageRejected: true }
+  })
+}
+
   // ─────────────────────────────
   // RENDER
   // ─────────────────────────────
   return (
+    <>
+     <AgeVerificationModal
+      isOpen={!ageVerified}
+      onConfirm={handleAgeConfirm}
+      onReject={handleAgeReject}
+    />
+  {ageVerified && (
     <div className="container py-4" style={{ maxWidth: 900 }}>
       {expirationTime && (
         <TicketrakTimer
@@ -564,5 +587,7 @@ const handlePostalCodeChange = async (cp: string) => {
 
       </div>
     </div>
+      )}
+    </>
   )
 }

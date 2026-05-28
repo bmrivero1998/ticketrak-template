@@ -356,7 +356,7 @@ export function CartSummary() {
             {/* Footer */}
             <div className="trak-footer">
               <span>🔒</span>
-              <span>Pago seguro con encriptación SSL · Los precios incluyen cargos por servicio.</span>
+              <span>El precio final ya incluye impuestos y cargos por servicio.</span>
             </div>
           </>
         )}
