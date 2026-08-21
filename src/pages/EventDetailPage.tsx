@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import DOMPurify from 'dompurify'
 import { Spinner } from '@/components/ui/Spinner'
 import { TierSelector } from '@/components/event/TierSelector'
 import { useFetch } from '@/hooks/useFetch'
@@ -10,6 +11,14 @@ import { PiNavigationArrow, PiMapPinFill, PiCalendarFill } from 'react-icons/pi'
 import { BiMap, BiCompass, BiDirections } from 'react-icons/bi';
 import { FaLocationDot } from 'react-icons/fa6';
 import { MdOutlineLocationOn } from 'react-icons/md';
+
+// Evita reverse-tabnabbing en links inyectados vía HTML del backend
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+  if (node.tagName === 'A') {
+    node.setAttribute('target', '_blank')
+    node.setAttribute('rel', 'noopener noreferrer')
+  }
+})
 
 export default function EventDetailPage() {
   // Ahora extraemos el 'slug' de la URL en lugar del 'id'
@@ -133,11 +142,14 @@ export default function EventDetailPage() {
     <h3 className="h6 text-uppercase fw-bold mb-3 opacity-50" style={{ letterSpacing: '1px' }}>
       Detalles
     </h3>
-    <div 
+    <div
       className="fs-6 lh-lg opacity-75 html-content"
-      dangerouslySetInnerHTML={{ 
-        __html: event.description || 'Sin descripción disponible para este evento.' 
-      }} 
+      dangerouslySetInnerHTML={{
+        __html: DOMPurify.sanitize(
+          event.description || 'Sin descripción disponible para este evento.',
+          { ALLOWED_TAGS: ['p', 'br', 'b', 'strong', 'i', 'em', 'u', 'ul', 'ol', 'li', 'a', 'span'], ALLOWED_ATTR: ['href', 'target', 'rel'] }
+        )
+      }}
     />
                 
     {(event.address || event.location_address) && (

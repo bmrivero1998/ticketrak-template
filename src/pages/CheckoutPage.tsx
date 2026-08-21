@@ -169,7 +169,7 @@ const [ageVerified, setAgeVerified] = useState(() => {
   // STEP 1 - EMAIL
   // ─────────────────────────────
   const handleEmailNext = async () => {
-    if (!email.includes('@')) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError('Email inválido')
       return
     }
