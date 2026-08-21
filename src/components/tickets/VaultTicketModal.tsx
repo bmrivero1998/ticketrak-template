@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import html2canvas from 'html2canvas'
-import { getTicketGoogleWallet } from '@/services/api'
+import { getTicketGoogleWallet, startVendorChat } from '@/services/api'
 import { Spinner } from '../ui/Spinner'
 import { EventDataVault, TicketVault } from '@/types'
 import { TicketView } from './TicketView'
+import { VendorChatModal } from './VendorChatModal'
+import { RefundRequestModal } from './RefundRequestModal'
 
 interface Props {
   isOpen: boolean
@@ -18,8 +20,25 @@ export function VaultTicketModal({ isOpen, onClose, ticket, event }: Props) {
 
   const [isProcessing, setIsProcessing] = useState(false)
   const [isAddingWallet, setIsAddingWallet] = useState(false)
+  const [isOpeningChat, setIsOpeningChat] = useState(false)
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false)
+  const [activeChat, setActiveChat] = useState<{ uuid: string; vendorEmail: string | null } | null>(null)
 
   if (!isOpen || !ticket || !event) return null
+
+  const canRequestRefund = ticket.status === 'ACTIVE'
+
+  const handleOpenVendorChat = async () => {
+    try {
+      setIsOpeningChat(true)
+      const { chat_uuid, vendor_email } = await startVendorChat(ticket.ticket_id)
+      setActiveChat({ uuid: chat_uuid, vendorEmail: vendor_email })
+    } catch (err: any) {
+      alert(err.message || 'No se pudo abrir el chat con el organizador.')
+    } finally {
+      setIsOpeningChat(false)
+    }
+  }
 
   // 🧠 CAPTURA LIMPIA (SIN GLITCH)
   const generateImage = async () => {
@@ -366,9 +385,52 @@ export function VaultTicketModal({ isOpen, onClose, ticket, event }: Props) {
                 Compartir
               </button>
             </div>
+
+            {/* Chat con el vendedor + solicitud de reembolso */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn-ghost" onClick={handleOpenVendorChat} disabled={isOpeningChat}>
+                {isOpeningChat ? <Spinner size={16} /> : (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                    </svg>
+                    Chat con el organizador
+                  </>
+                )}
+              </button>
+              {canRequestRefund && (
+                <button className="btn-ghost" onClick={() => setIsRefundModalOpen(true)}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="1 4 1 10 7 10"/>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                  </svg>
+                  Solicitar reembolso
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      <RefundRequestModal
+        isOpen={isRefundModalOpen}
+        onClose={() => setIsRefundModalOpen(false)}
+        ticketId={ticket.ticket_id}
+        eventName={event.event_name}
+        onSubmitted={(chatUuid, vendorEmail) => {
+          setIsRefundModalOpen(false)
+          setActiveChat({ uuid: chatUuid, vendorEmail })
+        }}
+      />
+
+      {activeChat && (
+        <VendorChatModal
+          isOpen={!!activeChat}
+          onClose={() => setActiveChat(null)}
+          chatUuid={activeChat.uuid}
+          vendorEmail={activeChat.vendorEmail}
+        />
+      )}
     </>
   )
 }

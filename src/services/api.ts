@@ -166,3 +166,99 @@ export async function getPublicSettings(eventId: string): Promise<{ stripe_publi
   return request<{ stripe_public_key: string; stripe_account?: string }>(`/tr/ticketplace/e/${eventId}/settings`)
 }
 
+// ─── CHAT CON EL VENDEDOR Y REEMBOLSOS ───────────────────────────────────────
+// Ticketrak solo cobra boletos vía Stripe, por eso estos flujos no distinguen
+// proveedor de pago. La plataforma no ejecuta reembolsos directamente: solo
+// registra la solicitud y abre un chat con el vendedor para resolverlo.
+
+export interface ChatMessage {
+  sender: 'CUSTOMER' | 'VENDOR' | 'SYSTEM'
+  message: string
+  timestamp: string
+}
+
+export interface Aclaracion {
+  uuid: string
+  project_uuid: string
+  customer_uuid?: string | null
+  target_type: string
+  customer_email: string
+  status: 'OPEN' | 'RESOLVED' | 'CLOSED'
+  history_chat: ChatMessage[]
+  created_at: string
+  updated_at: string
+}
+
+export type RefundRequestStatus = 'PENDING' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'REFUNDED'
+
+export interface RefundRequest {
+  id: string
+  ticket_id: string
+  project_id: string
+  customer_id: string
+  customer_email: string
+  reason: string
+  amount_requested_cents: number
+  status: RefundRequestStatus
+  chat_uuid?: string | null
+  resolution_note?: string | null
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Abre (o reutiliza) el chat del fan con el vendedor de un boleto.
+ */
+export async function startVendorChat(
+  ticketId: string,
+): Promise<{ chat_uuid: string; vendor_email: string | null }> {
+  return request<{ chat_uuid: string; vendor_email: string | null }>('/tr/refunds/chat', {
+    method: 'POST',
+    body: JSON.stringify({ ticket_id: ticketId }),
+  })
+}
+
+/**
+ * Registra una solicitud de reembolso para un boleto y abre su chat.
+ */
+export async function requestTicketRefund(
+  ticketId: string,
+  reason: string,
+): Promise<{ request: RefundRequest; chat_uuid: string; vendor_email: string | null }> {
+  return request<{ request: RefundRequest; chat_uuid: string; vendor_email: string | null }>('/tr/refunds', {
+    method: 'POST',
+    body: JSON.stringify({ ticket_id: ticketId, reason }),
+  })
+}
+
+/**
+ * Estado de la solicitud de reembolso (si existe) de un boleto puntual.
+ */
+export async function getTicketRefundRequest(ticketId: string): Promise<RefundRequest | null> {
+  return request<RefundRequest | null>(`/tr/refunds/ticket/${ticketId}`)
+}
+
+/**
+ * Todas las solicitudes de reembolso del fan autenticado.
+ */
+export async function getMyRefundRequests(): Promise<RefundRequest[]> {
+  return request<RefundRequest[]>('/tr/refunds/mine')
+}
+
+/**
+ * Detalle de una conversación (chat) por su UUID.
+ */
+export async function getChat(chatUuid: string): Promise<Aclaracion> {
+  return request<Aclaracion>(`/chat/${chatUuid}`)
+}
+
+/**
+ * Envía un mensaje del comprador dentro de un chat abierto.
+ */
+export async function sendChatMessage(chatUuid: string, message: string): Promise<void> {
+  await request<void>(`/chat/${chatUuid}/message`, {
+    method: 'POST',
+    body: JSON.stringify({ sender: 'CUSTOMER', message }),
+  })
+}
+
