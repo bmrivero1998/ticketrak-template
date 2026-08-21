@@ -15,7 +15,7 @@ export const CONFIG = {
  // API & PROYECTO
  // ----------------------------------------------------------
  API_URL: externalConfig.API_URL || env.VITE_API_URL || 'https://metritrak-workers.kripto-bmrp.workers.dev/v1',
- PROJECT_ID: externalConfig.PROJECT_ID || env.VITE_PROJECT_ID,
+ PROJECT_ID: externalConfig.PROJECT_ID || env.VITE_PROJECT_ID || '174d380b-86a6-4d1f-999b-2bafc81a51e0',
 
  // ----------------------------------------------------------
  // BRANDING & THEME (Shadow DOM Friendly)
@@ -45,8 +45,8 @@ export const CONFIG = {
  // STRIPE & CHECKOUT
  // ----------------------------------------------------------
  SITE_URL: externalConfig.SITE_URL || env.VITE_SITE_URL || 'http://localhost:5173',
- PUBLIC_KEY: externalConfig.PUBLIC_KEY || env.VITE_STRIPE_PUBLIC_KEY,
- STRIPE_ACCOUNT: externalConfig.STRIPE_ACCOUNT || env.VITE_STRIPE_ACCOUNT,
+ PUBLIC_KEY: externalConfig.PUBLIC_KEY || env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_51Rjrn9Q7rhLBuE2WtlgmxYdM1qYMuku9y7fNTBq5VblSsqzxOJyxeCVrByrnJkzYGbtTUFnlV3JjcaEn3657hm6000X2SBZZ4O',
+ STRIPE_ACCOUNT: externalConfig.STRIPE_ACCOUNT || env.VITE_STRIPE_ACCOUNT || 'acct_1SueuhQ7rhbnDgY2',
 
  // ----------------------------------------------------------
  // FEATURE FLAGS
