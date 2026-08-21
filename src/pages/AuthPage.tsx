@@ -9,7 +9,14 @@ export default function AuthPage() {
   const [step, setStep] = useState<1 | 2>(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cooldown, setCooldown] = useState(0)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = setInterval(() => setCooldown((c) => c - 1), 1000)
+    return () => clearInterval(timer)
+  }, [cooldown])
 
   // 🔑 Si ya hay token → directo al vault
   useEffect(() => {
@@ -19,11 +26,13 @@ export default function AuthPage() {
 
   const handleRequest = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (cooldown > 0) return
     setError(null)
     setLoading(true)
     try {
       await requestVaultCode(email)
       setStep(2)
+      setCooldown(30)
     } catch {
       setError('No pudimos enviar el código. Revisa tu correo.')
     } finally {
@@ -311,11 +320,13 @@ export default function AuthPage() {
                 )}
               </div>
 
-              <button className="auth-btn" type="submit" disabled={loading}>
+              <button className="auth-btn" type="submit" disabled={loading || (step === 1 && cooldown > 0)}>
                 {loading
                   ? <Spinner size={18} />
                   : step === 1
-                    ? <>Obtener código <span>→</span></>
+                    ? cooldown > 0
+                      ? <>Reintentar en {cooldown}s</>
+                      : <>Obtener código <span>→</span></>
                     : <>Acceder <span>→</span></>
                 }
               </button>
