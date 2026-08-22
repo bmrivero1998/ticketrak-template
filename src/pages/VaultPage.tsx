@@ -5,11 +5,13 @@ import { Spinner } from '@/components/ui/Spinner'
 import { formatDateShort, formatEventDate } from '@/config'
 import { VaultTicketModal } from '@/components/tickets/VaultTicketModal'
 import { EventTicketsPanel } from '@/components/tickets/EventTicketsPanel'
+import { VaultChatsPanel } from '@/components/tickets/VaultChatsPanel'
 import { EventDataVault } from '@/types'
 
 export default function VaultPage() {
   const navigate = useNavigate()
 
+  const [activeTab, setActiveTab] = useState<'tickets' | 'chats'>('tickets')
   const [events, setEvents] = useState<EventDataVault[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -66,6 +68,50 @@ export default function VaultPage() {
     setFilter('ALL')
   }
 
+  // El tab de Chats es independiente de si el fan tiene boletos o no, así
+  // que se muestra siempre — solo el contenido de "Boletos" respeta los
+  // estados de loading/error/vacío del fetch de tickets.
+  if (activeTab === 'chats') {
+    return (
+      <div className="container py-4 vault-page">
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap');
+          .vault-page { font-family: 'Barlow', sans-serif; }
+          .vault-title { font-family: 'Barlow Condensed', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: 0.02em; line-height: 1; margin: 0; }
+          .vault-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+          .vault-tab { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 100px; padding: 8px 18px; border: 1.5px solid rgba(255,255,255,0.18); background: transparent; color: rgba(255,255,255,0.55); cursor: pointer; transition: all 0.15s; }
+          .vault-tab:hover { border-color: rgba(255,255,255,0.4); color: rgba(255,255,255,0.85); }
+          .vault-tab.active { background: #fff; border-color: #fff; color: #111; }
+          .filter-pill { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 100px !important; padding: 7px 16px !important; border: 1.5px solid rgba(255,255,255,0.18) !important; background: transparent !important; color: rgba(255,255,255,0.55) !important; }
+          .filter-pill.active { background: #fff !important; border-color: #fff !important; color: #111 !important; }
+          .vault-loading { min-height: 40vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: rgba(255,255,255,0.5); font-size: 14px; }
+          .vault-empty-state { min-height: 40vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; color: #fff; }
+          .vault-empty-icon { font-size: 52px; margin-bottom: 16px; line-height: 1; }
+          .vault-empty-state h4 { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+          .vault-no-results { text-align: center; padding: 48px 20px; color: rgba(255,255,255,0.4); }
+          .vault-no-results-icon { font-size: 36px; margin-bottom: 12px; }
+          .vault-no-results h5 { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; color: rgba(255,255,255,0.6); margin-bottom: 6px; }
+        `}</style>
+
+        <div className="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+          <h1 className="vault-title">Mis Chats</h1>
+          <button onClick={handleLogout} className="btn-logout">
+            Cerrar sesión
+          </button>
+        </div>
+
+        <div className="vault-tabs">
+          <button className="vault-tab" onClick={() => setActiveTab('tickets')}>
+            Boletos
+          </button>
+          <button className="vault-tab active">Chats</button>
+        </div>
+
+        <VaultChatsPanel />
+      </div>
+    )
+  }
+
   // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -102,9 +148,14 @@ export default function VaultPage() {
         <div className="vault-empty-icon">🎟️</div>
         <h4>Aún no tienes boletos</h4>
         <p className="text-muted">Explora la cartelera y consigue el tuyo.</p>
-        <button onClick={() => navigate('/')} className="btn btn-primary rounded-pill px-4 mt-2">
-          Ver cartelera
-        </button>
+        <div className="d-flex gap-2 justify-content-center mt-2">
+          <button onClick={() => navigate('/')} className="btn btn-primary rounded-pill px-4">
+            Ver cartelera
+          </button>
+          <button onClick={() => setActiveTab('chats')} className="btn btn-outline-light rounded-pill px-4">
+            Ver mis chats
+          </button>
+        </div>
       </div>
     )
   }
@@ -387,7 +438,7 @@ export default function VaultPage() {
       <div className="container py-4 vault-page">
 
         {/* HEADER */}
-        <div className="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+        <div className="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-3">
           <div>
             <h1 className="vault-title">Mis Boletos</h1>
             <p className="vault-subtitle">
@@ -396,6 +447,13 @@ export default function VaultPage() {
           </div>
           <button onClick={handleLogout} className="btn-logout">
             Cerrar sesión
+          </button>
+        </div>
+
+        <div className="d-flex gap-2 mb-4">
+          <button className="filter-pill btn active">Boletos</button>
+          <button className="filter-pill btn" onClick={() => setActiveTab('chats')}>
+            Chats
           </button>
         </div>
 

@@ -246,6 +246,14 @@ export async function getMyRefundRequests(): Promise<RefundRequest[]> {
 }
 
 /**
+ * TODAS las conversaciones del fan autenticado (boletos y productos, sin
+ * importar el organizador) — para la pantalla "Mis chats" del Vault.
+ */
+export async function getMyChats(): Promise<Aclaracion[]> {
+  return request<Aclaracion[]>('/chat/mine')
+}
+
+/**
  * Detalle de una conversación (chat) por su UUID.
  */
 export async function getChat(chatUuid: string): Promise<Aclaracion> {

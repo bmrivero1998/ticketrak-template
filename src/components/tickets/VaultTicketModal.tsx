@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import html2canvas from 'html2canvas'
-import { getTicketGoogleWallet, startVendorChat } from '@/services/api'
+import { getTicketGoogleWallet, getTicketRefundRequest, startVendorChat, type RefundRequest } from '@/services/api'
 import { Spinner } from '../ui/Spinner'
 import { EventDataVault, TicketVault } from '@/types'
 import { TicketView } from './TicketView'
@@ -15,6 +15,14 @@ interface Props {
   event: EventDataVault
 }
 
+const ACTIVE_REFUND_STATUSES = ['PENDING', 'IN_REVIEW', 'APPROVED']
+
+const refundStatusLabels: Record<string, string> = {
+  PENDING: 'Solicitud pendiente',
+  IN_REVIEW: 'En revisión',
+  APPROVED: 'Reembolso aprobado',
+}
+
 export function VaultTicketModal({ isOpen, onClose, ticket, event }: Props) {
   const exportRef = useRef<HTMLDivElement>(null)
 
@@ -23,10 +31,41 @@ export function VaultTicketModal({ isOpen, onClose, ticket, event }: Props) {
   const [isOpeningChat, setIsOpeningChat] = useState(false)
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false)
   const [activeChat, setActiveChat] = useState<{ uuid: string; vendorEmail: string | null } | null>(null)
+  const [existingRefundRequest, setExistingRefundRequest] = useState<RefundRequest | null>(null)
+  const [isCheckingRefundStatus, setIsCheckingRefundStatus] = useState(true)
+
+  useEffect(() => {
+    if (!isOpen || !ticket) return
+
+    let cancelled = false
+    setIsCheckingRefundStatus(true)
+
+    getTicketRefundRequest(ticket.ticket_id)
+      .then((request) => {
+        if (cancelled) return
+        setExistingRefundRequest(
+          request && ACTIVE_REFUND_STATUSES.includes(request.status) ? request : null,
+        )
+      })
+      .catch((err) => console.error('Error consultando estado de reembolso:', err))
+      .finally(() => {
+        if (!cancelled) setIsCheckingRefundStatus(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, ticket?.ticket_id])
 
   if (!isOpen || !ticket || !event) return null
 
   const canRequestRefund = ticket.status === 'ACTIVE'
+
+  const handleOpenExistingRefundChat = () => {
+    if (existingRefundRequest?.chat_uuid) {
+      setActiveChat({ uuid: existingRefundRequest.chat_uuid, vendorEmail: null })
+    }
+  }
 
   const handleOpenVendorChat = async () => {
     try {
@@ -398,7 +437,16 @@ export function VaultTicketModal({ isOpen, onClose, ticket, event }: Props) {
                   </>
                 )}
               </button>
-              {canRequestRefund && (
+              {canRequestRefund && !isCheckingRefundStatus && existingRefundRequest && (
+                <button className="btn-ghost" onClick={handleOpenExistingRefundChat}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="1 4 1 10 7 10"/>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                  </svg>
+                  {refundStatusLabels[existingRefundRequest.status] || 'Reembolso en curso'}
+                </button>
+              )}
+              {canRequestRefund && !isCheckingRefundStatus && !existingRefundRequest && (
                 <button className="btn-ghost" onClick={() => setIsRefundModalOpen(true)}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="1 4 1 10 7 10"/>
@@ -420,6 +468,13 @@ export function VaultTicketModal({ isOpen, onClose, ticket, event }: Props) {
         onSubmitted={(chatUuid, vendorEmail) => {
           setIsRefundModalOpen(false)
           setActiveChat({ uuid: chatUuid, vendorEmail })
+          getTicketRefundRequest(ticket.ticket_id)
+            .then((request) =>
+              setExistingRefundRequest(
+                request && ACTIVE_REFUND_STATUSES.includes(request.status) ? request : null,
+              ),
+            )
+            .catch((err) => console.error('Error consultando estado de reembolso:', err))
         }}
       />
 
