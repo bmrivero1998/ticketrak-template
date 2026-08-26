@@ -1,10 +1,25 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import html2canvas from 'html2canvas'
-import { getTicketGoogleWallet } from '@/services/api'
+import { getTicketGoogleWallet, getTicketRefundRequest, startTicketVendorChat } from '@/services/api'
 import { Spinner } from '../ui/Spinner'
-import { EventDataVault, TicketVault } from '@/types'
+import { EventDataVault, TicketRefundRequest, TicketVault } from '@/types'
 import { TicketView } from './TicketView'
+import { TicketRefundRequestModal } from './TicketRefundRequestModal'
+import { TicketRefundChatModal } from './TicketRefundChatModal'
+
+const REFUND_STATUS_LABEL: Record<string, string> = {
+  PENDING: 'Pendiente',
+  IN_REVIEW: 'En revisión',
+  APPROVED: 'Aprobada',
+  REJECTED: 'Rechazada',
+  REFUNDED: 'Reembolsada',
+}
+
+/** Un boleto ya usado o vencido no puede pedir reembolso (mismo criterio que EventTicketsPanel). */
+function isRefundable(status: string) {
+  return status !== 'USED' && status !== 'EXPIRED'
+}
 
 interface Props {
   isOpen: boolean
@@ -19,7 +34,54 @@ export function VaultTicketModal({ isOpen, onClose, ticket, event }: Props) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isAddingWallet, setIsAddingWallet] = useState(false)
 
+  const [refundRequest, setRefundRequest] = useState<TicketRefundRequest | null>(null)
+  const [isLoadingRefund, setIsLoadingRefund] = useState(false)
+  const [isOpeningChat, setIsOpeningChat] = useState(false)
+  const [showRefundModal, setShowRefundModal] = useState(false)
+  const [activeChat, setActiveChat] = useState<{ uuid: string; vendorEmail: string | null } | null>(null)
+
+  useEffect(() => {
+    if (!isOpen || !ticket) {
+      setRefundRequest(null)
+      return
+    }
+    let cancelled = false
+    setIsLoadingRefund(true)
+    getTicketRefundRequest(ticket.ticket_id)
+      .then((data) => {
+        if (!cancelled) setRefundRequest(data)
+      })
+      .catch(() => {
+        if (!cancelled) setRefundRequest(null)
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingRefund(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, ticket?.ticket_id])
+
   if (!isOpen || !ticket || !event) return null
+
+  async function openVendorChat() {
+    if (!ticket) return
+    setIsOpeningChat(true)
+    try {
+      const result = await startTicketVendorChat(ticket.ticket_id)
+      setActiveChat({ uuid: result.chat_uuid, vendorEmail: result.vendor_email })
+    } catch {
+      alert('No se pudo abrir el chat con el organizador.')
+    } finally {
+      setIsOpeningChat(false)
+    }
+  }
+
+  function handleRefundSubmitted(payload: { chatUuid: string; vendorEmail: string | null }) {
+    setShowRefundModal(false)
+    setActiveChat({ uuid: payload.chatUuid, vendorEmail: payload.vendorEmail })
+    if (ticket) getTicketRefundRequest(ticket.ticket_id).then(setRefundRequest).catch(() => {})
+  }
 
   // 🧠 CAPTURA LIMPIA (SIN GLITCH)
   const generateImage = async () => {
@@ -366,9 +428,49 @@ export function VaultTicketModal({ isOpen, onClose, ticket, event }: Props) {
                 Compartir
               </button>
             </div>
+
+            {/* 💬 Reembolso del boleto — solo boletos, nunca productos/servicios */}
+            {!isLoadingRefund && (
+              <>
+                {refundRequest ? (
+                  <button
+                    className="btn-ghost"
+                    style={{ width: '100%' }}
+                    onClick={() => setActiveChat({ uuid: refundRequest.chat_uuid || '', vendorEmail: null })}
+                    disabled={!refundRequest.chat_uuid}
+                  >
+                    Reembolso: {REFUND_STATUS_LABEL[refundRequest.status] || refundRequest.status} — Ver chat
+                  </button>
+                ) : isRefundable(ticket.status) ? (
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button className="btn-ghost" onClick={openVendorChat} disabled={isOpeningChat}>
+                      {isOpeningChat ? <Spinner size={16} /> : 'Chat con el organizador'}
+                    </button>
+                    <button className="btn-ghost" onClick={() => setShowRefundModal(true)}>
+                      Solicitar reembolso
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       </div>
+
+      <TicketRefundRequestModal
+        isOpen={showRefundModal}
+        ticketId={ticket.ticket_id}
+        tierName={ticket.tier_name}
+        onClose={() => setShowRefundModal(false)}
+        onSubmitted={handleRefundSubmitted}
+      />
+
+      <TicketRefundChatModal
+        isOpen={!!activeChat}
+        chatUuid={activeChat?.uuid || ''}
+        vendorEmail={activeChat?.vendorEmail}
+        onClose={() => setActiveChat(null)}
+      />
     </>
   )
 }

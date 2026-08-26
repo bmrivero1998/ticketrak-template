@@ -15,6 +15,8 @@ import type {
   CheckoutSessionStatus,
   Ticket,
   ResponseApi,
+  TicketRefundRequest,
+  Aclaracion,
 } from '@/types'
 
 // ─── CORE REQUEST ────────────────────────────────────────────────────────────
@@ -164,5 +166,49 @@ export async function getTicketGoogleWallet(ticketId: string): Promise<{ url: st
 // En api.ts
 export async function getPublicSettings(eventId: string): Promise<{ stripe_public_key: string; stripe_account?: string }> {
   return request<{ stripe_public_key: string; stripe_account?: string }>(`/tr/ticketplace/e/${eventId}/settings`)
+}
+
+// ─── REEMBOLSOS DE BOLETOS (solo boletos — no productos ni servicios) ───────
+// Ticketrak no ejecuta el reembolso: el organizador lo confirma manualmente
+// después de haberlo hecho por su cuenta con su proveedor de pago. Estas
+// funciones solo abren la solicitud + el chat de seguimiento.
+
+/** Estado (si existe) de la solicitud de reembolso de un boleto puntual. */
+export async function getTicketRefundRequest(ticketId: string): Promise<TicketRefundRequest | null> {
+  return request<TicketRefundRequest | null>(`/tr/refunds/ticket/${ticketId}`)
+}
+
+/** Abre (o reutiliza) el chat con el organizador sobre un boleto, sin pedir reembolso todavía. */
+export async function startTicketVendorChat(
+  ticketId: string,
+): Promise<{ chat_uuid: string; vendor_email: string | null }> {
+  return request(`/tr/refunds/chat`, {
+    method: 'POST',
+    body: JSON.stringify({ ticket_id: ticketId }),
+  })
+}
+
+/** Registra la solicitud de reembolso de un boleto y abre el chat con el organizador. */
+export async function requestTicketRefund(
+  ticketId: string,
+  reason: string,
+): Promise<{ request: TicketRefundRequest; chat_uuid: string; vendor_email: string | null }> {
+  return request(`/tr/refunds`, {
+    method: 'POST',
+    body: JSON.stringify({ ticket_id: ticketId, reason }),
+  })
+}
+
+// ─── CHAT (genérico — acompaña la solicitud de reembolso) ──────────────────
+
+export async function getChat(chatUuid: string): Promise<Aclaracion> {
+  return request<Aclaracion>(`/chat/${chatUuid}`)
+}
+
+export async function sendChatMessage(chatUuid: string, message: string): Promise<void> {
+  return request<void>(`/chat/${chatUuid}/message`, {
+    method: 'POST',
+    body: JSON.stringify({ sender: 'CUSTOMER', message }),
+  })
 }
 

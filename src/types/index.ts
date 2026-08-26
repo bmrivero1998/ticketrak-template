@@ -167,3 +167,40 @@ export interface TicketVault {
     gw_saved_link: string;
     created_at:    Date;
 }
+
+// ─── REEMBOLSOS DE BOLETOS ───────────────────────────────────────────────────
+// Solo boletos (ticketrak_refund_requests). NO confundir con reembolsos de
+// producto (Órdenes) ni de servicio (Reservas) — esos viven en MetriTrak,
+// este template no los toca. MetriTrak nunca ejecuta el reembolso en Stripe:
+// solo registra la solicitud y abre un chat con el vendedor.
+
+export type TicketRefundRequestStatus = 'PENDING' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'REFUNDED'
+
+export interface TicketRefundRequest {
+  id: string
+  ticket_id: string
+  status: TicketRefundRequestStatus
+  reason: string
+  amount_requested_cents: number
+  chat_uuid?: string | null
+  resolution_note?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ChatMessage {
+  sender: 'CUSTOMER' | 'VENDOR' | 'SYSTEM'
+  message: string
+  timestamp: string
+}
+
+export interface Aclaracion {
+  uuid: string
+  project_uuid: string
+  target_type: string
+  customer_email: string
+  status: 'OPEN' | 'RESOLVED' | 'CLOSED'
+  history_chat: ChatMessage[]
+  created_at: string
+  updated_at: string
+}
