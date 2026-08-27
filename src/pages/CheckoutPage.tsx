@@ -316,6 +316,9 @@ const handlePostalCodeChange = async (cp: string) => {
         reservation_id: resId,
         project_uuid: currentProjectId,
         customer_data: { email, name: customerName },
+        success_url: `${window.location.origin}/success`,
+        failure_url: `${window.location.origin}/success?status=failed`,
+        pending_url: `${window.location.origin}/success?status=pending`,
       })
 
       if (session.isFree) {
@@ -323,6 +326,23 @@ const handlePostalCodeChange = async (cp: string) => {
         navigate('/success', {
           state: { sessionToken: session.session_token },
         })
+        return
+      }
+
+      // Mercado Pago / PayPal: pago por redirección, no hay formulario embebido.
+      if (session.provider === 'mercadopago' || session.provider === 'paypal') {
+        if (!session.redirectUrl) {
+          setError('No se pudo generar el link de pago.')
+          setStep(3)
+          return
+        }
+
+        if (session.provider === 'paypal') {
+          // Necesitamos el project_uuid al volver de PayPal para capturar la orden.
+          sessionStorage.setItem('checkout_pp_project_uuid', currentProjectId)
+        }
+
+        window.location.href = session.redirectUrl
         return
       }
 

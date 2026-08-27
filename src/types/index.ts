@@ -105,12 +105,21 @@ export interface CheckoutSessionRequest {
           email: string;
           name: string;
         }
+        // Solo los usa Mercado Pago/PayPal (pago por redirección) — Stripe
+        // los ignora porque cobra embebido con client_secret.
+        success_url?: string;
+        failure_url?: string;
+        pending_url?: string;
+        notification_url?: string;
 }
 
 export interface CheckoutSessionResponse {
   url?: string
   sessionId?: string
-  clientSecret?: string 
+  provider?: 'stripe' | 'mercadopago' | 'paypal'
+  clientSecret?: string
+  redirectUrl?: string // Mercado Pago / PayPal: URL a la que redirigir al comprador
+  ppOrderId?: string
   orderUuid?: string
   isFree?: boolean // ✅ Nuevo campo que manda el backend
   session_token?: string // ✅ Nuevo campo que manda el backend
