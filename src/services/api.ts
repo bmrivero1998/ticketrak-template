@@ -119,6 +119,23 @@ export async function getCheckoutStatus(sessionId: string): Promise<CheckoutSess
   return request<CheckoutSessionStatus>(`/tr/engine/handshacke/${sessionId}`)
 }
 
+/**
+ * Al volver de PayPal (redirect de aprobación) hay que capturar la orden
+ * explícitamente para que se libere el cobro y se emitan los boletos.
+ */
+export async function capturePayPalOrder(
+  ppOrderId: string,
+  projectUuid: string,
+): Promise<{ orderUuid?: string; module?: 'ticketrak' | 'booking' }> {
+  return request<{ orderUuid?: string; module?: 'ticketrak' | 'booking' }>(
+    '/v2/payments/paypal/capture',
+    {
+      method: 'POST',
+      body: JSON.stringify({ ppOrderId, project_uuid: projectUuid }),
+    },
+  )
+}
+
 // ─── VAULT (Acceso para Fans / Compradores) ──────────────────────────────────
 
 /**

@@ -7,6 +7,7 @@ import {
 } from 'react-router-dom'
 
 import { useCart } from '@/context/CartContext'
+import { capturePayPalOrder } from '@/services/api'
 import { BiCheckCircle } from 'react-icons/bi'
 import { FaClock } from 'react-icons/fa'
 import { IoCloseCircle } from 'react-icons/io5' // Para XCircle
@@ -37,45 +38,138 @@ export default function SuccessPage() {
   }
 
   useEffect(() => {
-    if (location.state?.sessionToken) {
-      setStatus('success')
-      setMessage(
-        'Tus boletos fueron generados correctamente y enviados a tu correo.'
-      )
-      clearCorrectEvent()
-      return
-    }
-
-    const redirectStatus = searchParams.get('redirect_status')
-
-    switch (redirectStatus) {
-      case 'succeeded':
+    const run = async () => {
+      if (location.state?.sessionToken) {
         setStatus('success')
         setMessage(
-          'Tu pago fue confirmado y tus boletos ya están en camino.'
+          'Tus boletos fueron generados correctamente y enviados a tu correo.'
         )
         clearCorrectEvent()
-        break
+        return
+      }
 
-      case 'processing':
-        setStatus('processing')
-        setMessage(
-          'Estamos confirmando tu pago. Esto puede tardar unos minutos.'
-        )
-        break
+      // PayPal: vuelve con ?token=<ppOrderId>&PayerID=... tras la aprobación.
+      // Hay que capturar la orden explícitamente para liberar el cobro.
+      const ppOrderId = searchParams.get('token')
+      const payerId = searchParams.get('PayerID')
 
-      case 'requires_payment_method':
-      case 'failed':
-        setStatus('error')
-        setMessage(
-          'No pudimos procesar el pago. No te preocupes, puedes intentarlo nuevamente.'
-        )
-        break
+      if (ppOrderId && payerId) {
+        const projectUuid = sessionStorage.getItem('checkout_pp_project_uuid')
 
-      default:
-        navigate('/')
-        break
+        if (!projectUuid) {
+          setStatus('error')
+          setMessage(
+            'No pudimos confirmar tu pago con PayPal. Contáctanos si el cargo se realizó.'
+          )
+          return
+        }
+
+        try {
+          await capturePayPalOrder(ppOrderId, projectUuid)
+          sessionStorage.removeItem('checkout_pp_project_uuid')
+          setStatus('success')
+          setMessage(
+            'Tu pago con PayPal fue confirmado y tus boletos ya están en camino.'
+          )
+          clearCorrectEvent()
+        } catch (err: any) {
+          setStatus('error')
+          setMessage(
+            err?.message ||
+              'No pudimos capturar tu pago con PayPal. Contáctanos si el cargo se realizó.'
+          )
+        }
+        return
+      }
+
+      // Mercado Pago: vuelve con ?collection_status=approved|pending|rejected
+      const mpStatus = searchParams.get('collection_status')
+
+      if (mpStatus) {
+        switch (mpStatus) {
+          case 'approved':
+            setStatus('success')
+            setMessage(
+              'Tu pago fue confirmado y tus boletos ya están en camino.'
+            )
+            clearCorrectEvent()
+            break
+
+          case 'pending':
+          case 'in_process':
+            setStatus('processing')
+            setMessage(
+              'Estamos confirmando tu pago. Esto puede tardar unos minutos.'
+            )
+            break
+
+          default:
+            setStatus('error')
+            setMessage(
+              'No pudimos procesar el pago. No te preocupes, puedes intentarlo nuevamente.'
+            )
+            break
+        }
+        return
+      }
+
+      // Nuestro propio parámetro de failure_url/pending_url (cancelación en
+      // PayPal, o fallback de Mercado Pago si no llegó collection_status).
+      const ownStatus = searchParams.get('status')
+
+      if (ownStatus) {
+        switch (ownStatus) {
+          case 'pending':
+            setStatus('processing')
+            setMessage(
+              'Estamos confirmando tu pago. Esto puede tardar unos minutos.'
+            )
+            break
+
+          default:
+            setStatus('error')
+            setMessage(
+              'No pudimos procesar el pago. No te preocupes, puedes intentarlo nuevamente.'
+            )
+            break
+        }
+        return
+      }
+
+      // Stripe: vuelve con ?redirect_status=succeeded|processing|...
+      const redirectStatus = searchParams.get('redirect_status')
+
+      switch (redirectStatus) {
+        case 'succeeded':
+          setStatus('success')
+          setMessage(
+            'Tu pago fue confirmado y tus boletos ya están en camino.'
+          )
+          clearCorrectEvent()
+          break
+
+        case 'processing':
+          setStatus('processing')
+          setMessage(
+            'Estamos confirmando tu pago. Esto puede tardar unos minutos.'
+          )
+          break
+
+        case 'requires_payment_method':
+        case 'failed':
+          setStatus('error')
+          setMessage(
+            'No pudimos procesar el pago. No te preocupes, puedes intentarlo nuevamente.'
+          )
+          break
+
+        default:
+          navigate('/')
+          break
+      }
     }
+
+    run()
   }, [searchParams, location, navigate, removeEventCart])
 
   if (status === 'loading') {
