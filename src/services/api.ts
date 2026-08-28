@@ -184,9 +184,10 @@ export async function getPublicSettings(eventId: string): Promise<{ stripe_publi
 }
 
 // ─── CHAT CON EL VENDEDOR Y REEMBOLSOS ───────────────────────────────────────
-// Ticketrak solo cobra boletos vía Stripe, por eso estos flujos no distinguen
-// proveedor de pago. La plataforma no ejecuta reembolsos directamente: solo
-// registra la solicitud y abre un chat con el vendedor para resolverlo.
+// Ticketrak puede cobrar boletos vía Stripe, Mercado Pago o PayPal, pero
+// estos flujos no distinguen proveedor de pago: la plataforma no ejecuta
+// reembolsos directamente con ninguno, solo registra la solicitud y abre un
+// chat con el vendedor para que él lo resuelva con su propia pasarela.
 
 export interface ChatMessage {
   sender: 'CUSTOMER' | 'VENDOR' | 'SYSTEM'
