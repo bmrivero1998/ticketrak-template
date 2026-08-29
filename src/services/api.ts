@@ -205,6 +205,9 @@ export interface Aclaracion {
   history_chat: ChatMessage[]
   created_at: string
   updated_at: string
+  /** Solo viene en GET /chat/:uuid — true si el vendedor activó el chat en vivo (v2). */
+  live_chat?: boolean
+  live_chat_expires_at?: number | null
 }
 
 export type RefundRequestStatus = 'PENDING' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'REFUNDED'

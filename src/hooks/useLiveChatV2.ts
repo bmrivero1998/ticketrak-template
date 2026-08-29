@@ -6,9 +6,9 @@
  *
  * El comprador nunca puede iniciar la sesión (ver ChatRoomV2DO en
  * metritrak-workers) — solo puede unirse a una que el vendedor ya haya
- * activado. Por eso este hook expone `pollLive` para revisar
- * periódicamente /v2/chat/:roomId/status mientras el chat está abierto, en
- * vez de intentar conectar el WebSocket a ciegas.
+ * activado. Detectar que ya está activa no es trabajo de este hook: viene
+ * como `live_chat` en la respuesta de GET /chat/:uuid, que VendorChatModal
+ * ya pollea cada 8s (ver chat.handler.ts en metritrak-workers).
  *
  * Protocolo:
  *   cliente → servidor: {type:'message', message} | {type:'ping'} | {type:'end'}
@@ -46,7 +46,6 @@ function wsUrl(roomId: string, sender: LiveSender, name: string): string {
 }
 
 export function useLiveChatV2() {
-  const [isLive, setIsLive] = useState(false) // hay sesión activa en el servidor (según /status)
   const [isConnecting, setIsConnecting] = useState(false)
   const [isActive, setIsActive] = useState(false) // nuestro WebSocket está conectado
   const [messages, setMessages] = useState<LiveMessage[]>([])
@@ -85,22 +84,6 @@ export function useLiveChatV2() {
     setRemainingLabel(`${m}:${String(s).padStart(2, '0')}`)
   }, [])
 
-  /** Consulta si hay una sesión en vivo activa, sin abrir WebSocket. */
-  const pollLive = useCallback(async (roomId: string) => {
-    try {
-      const res = await fetch(`${httpBaseUrl()}/v2/chat/${encodeURIComponent(roomId)}/status`)
-      if (!res.ok) {
-        setIsLive(false)
-        return false
-      }
-      const data = await res.json()
-      setIsLive(!!data.live)
-      return !!data.live
-    } catch {
-      return false
-    }
-  }, [])
-
   const connect = useCallback(
     (roomId: string, sender: LiveSender, name: string) => {
       teardown()
@@ -133,7 +116,6 @@ export function useLiveChatV2() {
           setMessages((prev) => [...prev, parsed.data])
         } else if (parsed.type === 'ended') {
           setEndedReason(ENDED_LABELS[parsed.reason as EndReason] || 'La sesión en vivo terminó.')
-          setIsLive(false)
           teardown()
         }
       }
@@ -172,13 +154,11 @@ export function useLiveChatV2() {
   }, [])
 
   return {
-    isLive,
     isConnecting,
     isActive,
     messages,
     remainingLabel,
     endedReason,
-    pollLive,
     connect,
     send,
     ping,
