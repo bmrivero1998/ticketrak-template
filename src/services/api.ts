@@ -288,3 +288,15 @@ export async function sendChatMessage(chatUuid: string, message: string): Promis
   })
 }
 
+/**
+ * Registra el token de push (FCM) del comprador — se identifica por email,
+ * no tiene un user_id de staff como el vendedor.
+ * Backend: POST /v1/notifications/register
+ */
+export async function registerFanPushToken(fanEmail: string, token: string): Promise<void> {
+  await request<void>('/notifications/register', {
+    method: 'POST',
+    body: JSON.stringify({ fanEmail, token }),
+  })
+}
+

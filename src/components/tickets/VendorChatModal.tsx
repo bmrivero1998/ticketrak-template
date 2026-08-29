@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { getChat, sendChatMessage, type Aclaracion, type ChatMessage } from '@/services/api'
 import { Spinner } from '../ui/Spinner'
 import { useLiveChatV2 } from '@/hooks/useLiveChatV2'
+import { useFanPushNotifications } from '@/hooks/useFanPushNotifications'
 
 const LIVE_POLL_MS = 20000
 
@@ -22,6 +23,7 @@ export function VendorChatModal({ isOpen, onClose, chatUuid, vendorEmail }: Prop
   const bottomRef = useRef<HTMLDivElement>(null)
   const liveBottomRef = useRef<HTMLDivElement>(null)
   const live = useLiveChatV2()
+  const push = useFanPushNotifications()
 
   useEffect(() => {
     if (!isOpen || !chatUuid) return
@@ -91,6 +93,10 @@ export function VendorChatModal({ isOpen, onClose, chatUuid, vendorEmail }: Prop
 
   const joinLiveChat = () => {
     live.connect(chatUuid, 'CUSTOMER', chat?.customer_email || 'Comprador')
+  }
+
+  const enablePush = () => {
+    if (chat?.customer_email) push.requestAndRegister(chat.customer_email)
   }
 
   const handleLiveSend = () => {
@@ -193,6 +199,17 @@ export function VendorChatModal({ isOpen, onClose, chatUuid, vendorEmail }: Prop
           margin: 12px 16px 0; padding: 10px 12px; border-radius: 10px; text-align: center;
           background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); font-size: 12px;
         }
+        .chat-push-banner {
+          margin: 12px 16px 0; padding: 10px 12px; border-radius: 10px;
+          background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+          display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        }
+        .chat-push-banner span { color: rgba(255,255,255,0.75); font-size: 12px; }
+        .chat-push-enable {
+          background: rgba(255,255,255,0.14); color: #fff; border: none; border-radius: 8px;
+          padding: 6px 12px; font-weight: 700; cursor: pointer; font-size: 12px; white-space: nowrap;
+        }
+        .chat-push-enable:disabled { opacity: 0.5; cursor: not-allowed; }
       `}</style>
 
       <div className="chat-overlay" onClick={onClose}>
@@ -254,6 +271,15 @@ export function VendorChatModal({ isOpen, onClose, chatUuid, vendorEmail }: Prop
                 </div>
               )}
               {live.endedReason && <div className="chat-ended-banner">{live.endedReason}</div>}
+
+              {!isLoading && chat && push.permission === 'default' && (
+                <div className="chat-push-banner">
+                  <span>🔔 Activa las notificaciones para saber cuándo el vendedor esté en vivo</span>
+                  <button className="chat-push-enable" onClick={enablePush} disabled={push.isRequesting}>
+                    {push.isRequesting ? <Spinner size={12} /> : 'Activar'}
+                  </button>
+                </div>
+              )}
 
               <div className="chat-body">
                 {isLoading && (
