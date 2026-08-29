@@ -4,8 +4,6 @@ import { Spinner } from '../ui/Spinner'
 import { useLiveChatV2 } from '@/hooks/useLiveChatV2'
 import { useFanPushNotifications } from '@/hooks/useFanPushNotifications'
 
-const LIVE_POLL_MS = 20000
-
 interface Props {
   isOpen: boolean
   onClose: () => void
@@ -31,6 +29,9 @@ export function VendorChatModal({ isOpen, onClose, chatUuid, vendorEmail }: Prop
     let cancelled = false
 
     const load = async () => {
+      // Mientras está en modo en vivo los mensajes ya llegan por
+      // WebSocket — no hace falta seguir pegándole a v1 cada 8s.
+      if (live.isActive) return
       try {
         const data = await getChat(chatUuid)
         if (!cancelled) setChat(data)
@@ -43,25 +44,6 @@ export function VendorChatModal({ isOpen, onClose, chatUuid, vendorEmail }: Prop
 
     load()
     const interval = setInterval(load, 8000)
-
-    return () => {
-      cancelled = true
-      clearInterval(interval)
-    }
-  }, [isOpen, chatUuid])
-
-  // El comprador nunca inicia la sesión en vivo — solo detecta si el
-  // vendedor ya la activó (chequeo liviano, sin abrir WebSocket).
-  useEffect(() => {
-    if (!isOpen || !chatUuid || live.isActive) return
-
-    let cancelled = false
-    const check = () => {
-      if (!cancelled) live.pollLive(chatUuid)
-    }
-
-    check()
-    const interval = setInterval(check, LIVE_POLL_MS)
 
     return () => {
       cancelled = true
@@ -262,7 +244,7 @@ export function VendorChatModal({ isOpen, onClose, chatUuid, vendorEmail }: Prop
             </>
           ) : (
             <>
-              {live.isLive && (
+              {chat?.live_chat && (
                 <div className="chat-live-banner">
                   <span>🟢 El vendedor está en línea — chat en vivo disponible</span>
                   <button className="chat-live-join" onClick={joinLiveChat}>
