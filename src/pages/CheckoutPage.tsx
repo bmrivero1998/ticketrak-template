@@ -15,7 +15,9 @@ import {
   createCheckoutSession,
   getHandshake,
   getPublicSettings,
+  previewCoupon,
 } from '@/services/api'
+import type { CouponPreviewResponse } from '@/types'
 
 import { TicketrakTimer } from '@/components/checkout/CheckoutTimer'
 import { Spinner } from '@/components/ui/Spinner'
@@ -120,6 +122,52 @@ const [ageVerified, setAgeVerified] = useState(() => {
   // Verificar si ya confirmó edad en esta sesión
   return sessionStorage.getItem('age_verified') === 'true'
 })
+
+  // ── Cupón de descuento ──
+  const [couponInput, setCouponInput] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponPreviewResponse | null>(null)
+  const [couponChecking, setCouponChecking] = useState(false)
+
+  const buildCouponItems = () =>
+    items.map((i) => ({
+      item_id: i.tier.id,
+      quantity: i.quantity,
+      unit_price_cents:
+        i.tier.type === 'DONATION' ? i.donationAmount || i.tier.min_donation_amount : i.tier.price_amount,
+      event_id: i.event_id,
+    }))
+
+  const checkCoupon = async (code?: string) => {
+    if (!currentProjectId || !email) return
+    setCouponChecking(true)
+    try {
+      const result = await previewCoupon(currentProjectId, {
+        code: code?.trim() || undefined,
+        customer_email: email,
+        items: buildCouponItems(),
+      })
+      setAppliedCoupon(result)
+    } catch {
+      // Un fallo de red al validar el cupón no debe tumbar el checkout —
+      // el comprador simplemente sigue sin descuento visible.
+      setAppliedCoupon(null)
+    } finally {
+      setCouponChecking(false)
+    }
+  }
+
+  const handleApplyCoupon = () => {
+    checkCoupon(couponInput)
+  }
+
+  // Al tener correo y carrito, buscamos si hay algún descuento AUTOMÁTICO
+  // (sin código) aplicable — el comprador lo ve puesto sin teclear nada.
+  useEffect(() => {
+    if (email && items.length > 0 && !appliedCoupon) {
+      checkCoupon()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email, items.length])
 
   // ─────────────────────────────
   // VALIDAR MULTI EVENTO
@@ -319,6 +367,10 @@ const handlePostalCodeChange = async (cp: string) => {
         success_url: `${window.location.origin}/success`,
         failure_url: `${window.location.origin}/success?status=failed`,
         pending_url: `${window.location.origin}/success?status=pending`,
+        // Si no tecleó nada pero hay un descuento automático vigente, el
+        // backend lo aplica solo — este código solo importa cuando el
+        // comprador sí escribió uno manual.
+        coupon_code: appliedCoupon?.applied && appliedCoupon.code ? appliedCoupon.code : undefined,
       })
 
       if (session.isFree) {
@@ -602,7 +654,14 @@ const handleAgeReject = () => {
 
         {/* RESUMEN */}
         <div className="col-lg-5">
-          <CartSummary />
+          <CartSummary
+            customerEmail={email}
+            couponInput={couponInput}
+            onCouponInputChange={setCouponInput}
+            onApplyCoupon={handleApplyCoupon}
+            appliedCoupon={appliedCoupon}
+            couponChecking={couponChecking}
+          />
         </div>
 
       </div>

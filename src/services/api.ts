@@ -15,6 +15,8 @@ import type {
   CheckoutSessionStatus,
   Ticket,
   ResponseApi,
+  CouponPreviewItem,
+  CouponPreviewResponse,
 } from '@/types'
 
 // ─── CORE REQUEST ────────────────────────────────────────────────────────────
@@ -117,6 +119,25 @@ export async function createCheckoutSession(
 
 export async function getCheckoutStatus(sessionId: string): Promise<CheckoutSessionStatus> {
   return request<CheckoutSessionStatus>(`/tr/engine/handshacke/${sessionId}`)
+}
+
+/**
+ * Valida un cupón/código de descuento SIN reservarlo — para mostrarle al
+ * comprador "-15% aplicado" (o el error si el código no sirve) antes de
+ * pagar. La reserva real ocurre al armar el checkout.
+ */
+export async function previewCoupon(
+  projectUuid: string,
+  payload: {
+    code?: string
+    customer_email: string
+    items: CouponPreviewItem[]
+  },
+): Promise<CouponPreviewResponse> {
+  return request<CouponPreviewResponse>(`/coupons/project/${projectUuid}/preview`, {
+    method: 'POST',
+    body: JSON.stringify({ module: 'tickets', ...payload }),
+  })
 }
 
 /**

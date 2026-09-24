@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useCart } from '@/context/CartContext'
 import { formatCurrency, CONFIG } from '@/config'
+import type { CouponPreviewResponse } from '@/types'
 
 const { PRIMARY, BACKGROUND, TEXT, TEXT_SECONDARY } = CONFIG.THEME
 
@@ -210,6 +211,62 @@ const styles = `
   }
   .trak-remove:active { transform: scale(0.93); }
 
+  /* ── Cupón ── */
+  .trak-coupon {
+    margin: 0.9rem 1.4rem 0;
+  }
+  .trak-coupon-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .trak-coupon-input {
+    flex: 1;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid ${bgBorder};
+    border-radius: 10px;
+    padding: 0.55rem 0.8rem;
+    color: ${TEXT};
+    font-size: 0.82rem;
+    font-family: 'DM Sans', sans-serif;
+    text-transform: uppercase;
+  }
+  .trak-coupon-input::placeholder {
+    text-transform: none;
+    color: ${TEXT_SECONDARY};
+  }
+  .trak-coupon-btn {
+    background: ${PRIMARY};
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .trak-coupon-btn:disabled {
+    opacity: 0.5;
+  }
+  .trak-coupon-msg {
+    font-size: 0.74rem;
+    margin-top: 0.5rem;
+  }
+  .trak-coupon-msg-ok { color: #3ecf8e; }
+  .trak-coupon-msg-error { color: #f87171; }
+  .trak-coupon-hint {
+    font-size: 0.7rem;
+    color: ${TEXT_SECONDARY};
+    margin-top: 0.4rem;
+  }
+  .trak-discount-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 1.4rem;
+    margin-top: 0.7rem;
+    font-size: 0.8rem;
+    color: #3ecf8e;
+  }
+
   /* ── Total ── */
   .trak-total {
     margin: 0.9rem 1.4rem 0;
@@ -262,9 +319,29 @@ const styles = `
   .trak-empty-text { font-size: 0.82rem; color: ${TEXT_SECONDARY}; }
 `
 
-export function CartSummary() {
+interface CartSummaryProps {
+  /** Sin email todavía (paso 1), no mostramos el campo de cupón — el backend lo exige. */
+  customerEmail?: string
+  couponInput: string
+  onCouponInputChange: (value: string) => void
+  onApplyCoupon: () => void
+  appliedCoupon: CouponPreviewResponse | null
+  couponChecking: boolean
+}
+
+export function CartSummary({
+  customerEmail,
+  couponInput,
+  onCouponInputChange,
+  onApplyCoupon,
+  appliedCoupon,
+  couponChecking,
+}: CartSummaryProps) {
   const { items, totalCents, removeItem } = useCart()
   const [removing, setRemoving] = useState<string | null>(null)
+
+  const discountCents = appliedCoupon?.applied ? appliedCoupon.discountCents || 0 : 0
+  const finalTotalCents = Math.max(totalCents - discountCents, 0)
 
   const handleRemove = (tierId: string) => {
     setRemoving(tierId)
@@ -347,10 +424,52 @@ export function CartSummary() {
               })}
             </ul>
 
+            {/* Cupón de descuento */}
+            {customerEmail ? (
+              <div className="trak-coupon">
+                <div className="trak-coupon-row">
+                  <input
+                    className="trak-coupon-input"
+                    placeholder="Código de descuento"
+                    value={couponInput}
+                    onChange={(e) => onCouponInputChange(e.target.value)}
+                    disabled={couponChecking}
+                  />
+                  <button
+                    type="button"
+                    className="trak-coupon-btn"
+                    onClick={onApplyCoupon}
+                    disabled={couponChecking || !couponInput.trim()}
+                  >
+                    {couponChecking ? '...' : 'Aplicar'}
+                  </button>
+                </div>
+
+                {appliedCoupon?.applied && (
+                  <p className="trak-coupon-msg trak-coupon-msg-ok">
+                    🎉 {appliedCoupon.code ? `Cupón "${appliedCoupon.code}"` : 'Descuento'} aplicado
+                  </p>
+                )}
+                {appliedCoupon?.codeError && (
+                  <p className="trak-coupon-msg trak-coupon-msg-error">{appliedCoupon.codeError}</p>
+                )}
+                {!appliedCoupon?.applied && !appliedCoupon?.codeError && (
+                  <p className="trak-coupon-hint">¿Tienes un código de descuento? Escríbelo arriba.</p>
+                )}
+              </div>
+            ) : null}
+
+            {discountCents > 0 && (
+              <div className="trak-discount-row">
+                <span>Descuento</span>
+                <span>-{formatCurrency(discountCents)}</span>
+              </div>
+            )}
+
             {/* Total */}
             <div className="trak-total">
               <span className="trak-total-label">Total a pagar</span>
-              <span className="trak-total-amount">{formatCurrency(totalCents)}</span>
+              <span className="trak-total-amount">{formatCurrency(finalTotalCents)}</span>
             </div>
 
             {/* Footer */}
