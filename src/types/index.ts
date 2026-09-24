@@ -111,6 +111,23 @@ export interface CheckoutSessionRequest {
         failure_url?: string;
         pending_url?: string;
         notification_url?: string;
+        coupon_code?: string;
+}
+
+export interface CouponPreviewItem {
+  item_id: string
+  quantity: number
+  unit_price_cents: number
+  event_id?: string
+}
+
+export interface CouponPreviewResponse {
+  applied: boolean
+  couponId?: string
+  code?: string | null
+  discountType?: 'percent' | 'fixed' | 'bogo'
+  discountCents?: number
+  codeError?: string | null
 }
 
 export interface CheckoutSessionResponse {
