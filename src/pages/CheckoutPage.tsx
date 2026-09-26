@@ -124,8 +124,15 @@ const [ageVerified, setAgeVerified] = useState(() => {
 })
 
   // ── Cupón de descuento ──
+  // appliedCoupon es SIEMPRE el mejor resultado que hemos visto hasta ahora
+  // en esta sesión de checkout — nunca se pisa con algo peor. Antes, cada
+  // "Aplicar" reemplazaba sin comparar: si el comprador metía primero un
+  // 15% y después, por probar, un código inválido o de menor valor, se
+  // quedaba sin ningún descuento (o con el peor) aunque el 15% siguiera
+  // siendo válido.
   const [couponInput, setCouponInput] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState<CouponPreviewResponse | null>(null)
+  const [couponMessage, setCouponMessage] = useState<string | null>(null)
   const [couponChecking, setCouponChecking] = useState(false)
 
   const buildCouponItems = () =>
@@ -137,34 +144,65 @@ const [ageVerified, setAgeVerified] = useState(() => {
       event_id: i.event_id,
     }))
 
-  const checkCoupon = async (code?: string) => {
-    if (!currentProjectId || !email) return
-    setCouponChecking(true)
+  const discountOf = (r: CouponPreviewResponse | null) => (r?.applied ? r.discountCents || 0 : 0)
+
+  const runCouponPreview = async (code?: string): Promise<CouponPreviewResponse | null> => {
+    if (!currentProjectId || !email) return null
     try {
-      const result = await previewCoupon(currentProjectId, {
+      return await previewCoupon(currentProjectId, {
         code: code?.trim() || undefined,
         customer_email: email,
         items: buildCouponItems(),
       })
-      setAppliedCoupon(result)
     } catch {
       // Un fallo de red al validar el cupón no debe tumbar el checkout —
       // el comprador simplemente sigue sin descuento visible.
-      setAppliedCoupon(null)
-    } finally {
-      setCouponChecking(false)
+      return null
     }
   }
 
-  const handleApplyCoupon = () => {
-    checkCoupon(couponInput)
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return
+    setCouponChecking(true)
+    setCouponMessage(null)
+
+    const result = await runCouponPreview(couponInput)
+    setCouponChecking(false)
+
+    if (!result) {
+      setCouponMessage('No se pudo validar el código, intenta de nuevo.')
+      return
+    }
+
+    const newDiscount = discountOf(result)
+    const currentDiscount = discountOf(appliedCoupon)
+
+    if (newDiscount > currentDiscount) {
+      // Este código (o el automático que trae de vuelta el backend) da más
+      // que lo que ya teníamos — gana y sustituye.
+      setAppliedCoupon(result)
+      setCouponInput('')
+    } else if (result.codeError) {
+      // Código inválido/no aplicable — se muestra el motivo, pero lo que
+      // ya estaba aplicado (si algo) se queda intacto.
+      setCouponMessage(result.codeError)
+    } else if (currentDiscount > 0) {
+      setCouponMessage('Ya tienes aplicado un descuento mejor — se mantiene ese.')
+    } else {
+      setCouponMessage('Ese código no aplica a tu compra.')
+    }
   }
 
   // Al tener correo y carrito, buscamos si hay algún descuento AUTOMÁTICO
   // (sin código) aplicable — el comprador lo ve puesto sin teclear nada.
   useEffect(() => {
     if (email && items.length > 0 && !appliedCoupon) {
-      checkCoupon()
+      ;(async () => {
+        setCouponChecking(true)
+        const result = await runCouponPreview()
+        if (result?.applied) setAppliedCoupon(result)
+        setCouponChecking(false)
+      })()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email, items.length])
@@ -661,6 +699,7 @@ const handleAgeReject = () => {
             onApplyCoupon={handleApplyCoupon}
             appliedCoupon={appliedCoupon}
             couponChecking={couponChecking}
+            couponMessage={couponMessage}
           />
         </div>
 

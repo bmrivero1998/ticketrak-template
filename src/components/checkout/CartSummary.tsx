@@ -327,6 +327,8 @@ interface CartSummaryProps {
   onApplyCoupon: () => void
   appliedCoupon: CouponPreviewResponse | null
   couponChecking: boolean
+  /** Feedback transitorio (ej. "ya tienes un descuento mejor aplicado") cuando el intento no gana. */
+  couponMessage?: string | null
 }
 
 export function CartSummary({
@@ -336,6 +338,7 @@ export function CartSummary({
   onApplyCoupon,
   appliedCoupon,
   couponChecking,
+  couponMessage,
 }: CartSummaryProps) {
   const { items, totalCents, removeItem } = useCart()
   const [removing, setRemoving] = useState<string | null>(null)
@@ -450,10 +453,10 @@ export function CartSummary({
                     🎉 {appliedCoupon.code ? `Cupón "${appliedCoupon.code}"` : 'Descuento'} aplicado
                   </p>
                 )}
-                {appliedCoupon?.codeError && (
-                  <p className="trak-coupon-msg trak-coupon-msg-error">{appliedCoupon.codeError}</p>
+                {couponMessage && (
+                  <p className="trak-coupon-msg trak-coupon-msg-error">{couponMessage}</p>
                 )}
-                {!appliedCoupon?.applied && !appliedCoupon?.codeError && (
+                {!appliedCoupon?.applied && !couponMessage && (
                   <p className="trak-coupon-hint">¿Tienes un código de descuento? Escríbelo arriba.</p>
                 )}
               </div>
